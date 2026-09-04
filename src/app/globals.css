@@ -1,0 +1,234 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", "Avenir Next", "Segoe UI", Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+}
+
+:root {
+  color-scheme: light;
+  --page: #f8fafc;
+  --ink: #0f172a;
+}
+
+:root.dark {
+  color-scheme: dark;
+  --page: #080d18;
+  --ink: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: #fed7aa;
+  color: #7c2d12;
+}
+
+:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 3px;
+}
+
+.icon-button {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 0.75rem;
+  color: #475569;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.icon-button:hover {
+  background: #f1f5f9;
+  color: #f97316;
+}
+
+.dark .icon-button {
+  color: #cbd5e1;
+}
+
+.dark .icon-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.header-action {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.65rem;
+  border-radius: 0.75rem;
+  padding: 0.35rem 0.45rem;
+  color: #1e293b;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.05;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.header-action small {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: #94a3b8;
+  font-size: 0.625rem;
+  font-weight: 500;
+}
+
+.header-action:hover {
+  background: #f8fafc;
+  color: #f97316;
+}
+
+.dark .header-action {
+  color: #f8fafc;
+}
+
+.dark .header-action:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.button-primary,
+.button-secondary {
+  display: inline-flex;
+  min-height: 2.85rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.8rem;
+  padding: 0.75rem 1.15rem;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.button-primary {
+  background: #0f172a;
+  color: white;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
+}
+
+.button-primary:hover {
+  transform: translateY(-1px);
+  background: #f97316;
+}
+
+.button-secondary {
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #0f172a;
+}
+
+.button-secondary:hover {
+  border-color: #fb923c;
+  color: #ea580c;
+}
+
+.dark .button-secondary {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+}
+
+.field {
+  width: 100%;
+  min-height: 2.9rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: white;
+  padding: 0.75rem 0.95rem;
+  color: #0f172a;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.field.has-icon-left,
+.field-icon-left {
+  padding-left: 2.75rem !important;
+}
+
+.field.has-icon-right,
+.field-icon-right {
+  padding-right: 2.75rem !important;
+}
+
+.field.has-icon-both,
+.field-icon-both {
+  padding-left: 2.75rem !important;
+  padding-right: 2.75rem !important;
+}
+
+.field:focus {
+  border-color: #fb923c;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+}
+
+.dark .field {
+  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.045);
+  color: white;
+}
+
+.field::placeholder {
+  color: #94a3b8;
+}
+
+.surface {
+  border: 1px solid #e2e8f0;
+  border-radius: 1.25rem;
+  background: white;
+}
+
+.dark .surface {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+@media (max-width: 640px) {
+  .button-primary,
+  .button-secondary {
+    min-height: 2.7rem;
+    padding: 0.68rem 1rem;
+  }
+}

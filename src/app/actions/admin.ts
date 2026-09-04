@@ -1,0 +1,164 @@
+// src/app/actions/admin.ts
+"use server";
+
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+
+export async function updateShopStatusAction(shopId: string, status: 'active' | 'suspended' | 'rejected') {
+  try {
+    if (!(await requireAdmin())) {
+      return { success: false, error: "Unauthorized. Admin access required." };
+    }
+
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("shops")
+      .update({ status })
+      .eq("id", shopId);
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/shops");
+    revalidatePath("/seller");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to update shop status." };
+  }
+}
+
+export async function removeShopAction(shopId: string) {
+  try {
+    if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
+    const supabase = await createClient();
+    const { error } = await supabase.from("shops").delete().eq("id", shopId);
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/admin");
+    revalidatePath("/admin/shops");
+    revalidatePath("/seller");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Could not remove shop." };
+  }
+}
+
+async function requireAdmin() {
+  const user = await getCurrentUser();
+  return user?.app_metadata?.is_admin === true;
+}
+
+export async function saveCategoryAction(formData: FormData) {
+  try {
+    if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
+    const id = String(formData.get("id") ?? "").trim();
+    const name = String(formData.get("name") ?? "").trim();
+    const slug = String(formData.get("slug") ?? "").trim();
+    let imageUrl = String(formData.get("image_url") ?? "").trim();
+    if (!name || !slug) return { success: false, error: "Name and slug are required." };
+
+    const supabase = await createClient();
+
+    // Check if an image file was uploaded
+    const imageFile = formData.get("image_file");
+    if (imageFile instanceof File && imageFile.size > 0) {
+      const ext = imageFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `categories/${slug || "cat"}-${Date.now()}.${ext}`;
+      let uploaded = false;
+      
+      try {
+        const uploadResult = await supabase.storage.from("category-images").upload(path, imageFile, {
+          upsert: true,
+          contentType: imageFile.type,
+        });
+        if (!uploadResult.error) {
+          imageUrl = supabase.storage.from("category-images").getPublicUrl(path).data.publicUrl;
+          uploaded = true;
+        }
+      } catch {}
+
+      if (!uploaded) {
+        try {
+          const uploadResult = await supabase.storage.from("shop-assets").upload(path, imageFile, {
+            upsert: true,
+            contentType: imageFile.type,
+          });
+          if (!uploadResult.error) {
+            imageUrl = supabase.storage.from("shop-assets").getPublicUrl(path).data.publicUrl;
+            uploaded = true;
+          }
+        } catch {}
+      }
+
+      // If Supabase Storage upload failed (e.g. missing bucket or RLS), convert to base64 Data URL so user's image is never lost
+      if (!uploaded) {
+        try {
+          const bytes = await imageFile.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+          imageUrl = `data:${imageFile.type || "image/jpeg"};base64,${buffer.toString("base64")}`;
+        } catch {}
+      }
+    }
+
+    const payload: Record<string, unknown> = { name, slug };
+    if (imageUrl) {
+      payload.image_url = imageUrl;
+    } else if (!id) {
+      payload.image_url = null;
+    }
+
+    let result = id
+      ? await supabase.from("categories").update(payload).eq("id", id)
+      : await supabase.from("categories").insert(payload);
+
+    if (result.error) {
+      const altPayload: Record<string, unknown> = {
+        name,
+        slug,
+        image: imageUrl || null,
+        image_path: imageUrl || null,
+      };
+      const retryResult = id
+        ? await supabase.from("categories").update(altPayload).eq("id", id)
+        : await supabase.from("categories").insert(altPayload);
+      if (retryResult.error) {
+        return { success: false, error: result.error.message };
+      }
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/categories");
+    revalidatePath("/");
+    revalidatePath("/search");
+    return { success: true, imageUrl: imageUrl || undefined, id: id || undefined };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Could not save category." };
+  }
+}
+
+export async function deleteCategoryAction(categoryId: string) {
+  try {
+    if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
+    const supabase = await createClient();
+    const { error } = await supabase.from("categories").delete().eq("id", categoryId);
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/admin");
+    revalidatePath("/admin/categories");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Could not delete category." };
+  }
+}
+
+export async function updatePayoutStatusAction(payoutId: string, status: "approved" | "paid") {
+  try {
+    if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
+    const supabase = await createClient();
+    let result = await supabase.from("payouts").update({ status }).eq("id", payoutId);
+    if (result.error) result = await supabase.from("transactions").update({ status }).eq("id", payoutId);
+    if (result.error) return { success: false, error: result.error.message };
+    revalidatePath("/admin/payouts");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Could not update payout." };
+  }
+}
