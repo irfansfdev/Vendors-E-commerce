@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Clock3, RotateCcw, ShieldCheck, Star, Truck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, ArrowRight, BadgeCheck, Clock3, RotateCcw, ShieldCheck, Star, Truck } from "lucide-react";
 import { ProductCard } from "@/components/product-card";
 import type { Category, Product, Shop } from "@/lib/types";
 import { initials } from "@/lib/utils";
@@ -9,9 +12,24 @@ export function SectionHeading({ eyebrow, title, href = "/search", linkLabel = "
   return <div className="mb-6 flex items-end justify-between gap-4"><div>{eyebrow && <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[.18em] text-orange-500">{eyebrow}</p>}<h2 className="text-2xl font-extrabold tracking-[-.045em] text-slate-950 dark:text-white sm:text-3xl">{title}</h2></div><Link href={href} className="group flex shrink-0 items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-orange-500 dark:text-slate-300 sm:text-sm">{linkLabel}<ArrowRight className="size-4 transition group-hover:translate-x-1" /></Link></div>;
 }
 
-export function Hero({ product }: { product?: Product }) {
+export function Hero({ products }: { products: Product[] }) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const product = products[selectedIndex] ?? products[0];
+
+  useEffect(() => {
+    if (products.length < 2) return;
+    const timer = window.setInterval(() => {
+      setSelectedIndex((index) => (index + 1) % products.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [products.length]);
+
+  function selectProduct(index: number) {
+    setSelectedIndex((index + products.length) % products.length);
+  }
+
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-[#102a2a] text-white sm:rounded-[2rem]">
+    <section className="relative overflow-hidden bg-[#102a2a] text-white">
       <div className="absolute -left-32 -top-44 size-[420px] rounded-full bg-orange-400/20 blur-3xl" />
       <div className="absolute bottom-[-35%] right-[25%] size-[420px] rounded-full bg-emerald-300/10 blur-3xl" />
       <div className="grid min-h-[510px] items-center md:grid-cols-[1.05fr_.95fr] lg:min-h-[560px]">
@@ -22,14 +40,24 @@ export function Hero({ product }: { product?: Product }) {
           <div className="mt-8 flex flex-wrap gap-3"><Link href="/search" className="button-primary bg-orange-500 hover:bg-orange-600">Explore the marketplace <ArrowRight className="size-4" /></Link><Link href="/seller" className="button-secondary border-white/20 bg-white/10 text-white hover:bg-white/15">Start selling</Link></div>
           <div className="mt-9 flex items-center gap-5 text-[11px] font-semibold text-slate-300 sm:gap-8 sm:text-xs"><span className="flex items-center gap-1.5"><ShieldCheck className="size-4 text-emerald-300" /> Buyer protection</span><span className="flex items-center gap-1.5"><Truck className="size-4 text-emerald-300" /> Tracked delivery</span></div>
         </div>
-        <div className="relative hidden h-full min-h-[510px] md:block">
+        <div className="relative h-[380px] min-h-[380px] md:h-full md:min-h-[510px]">
+          {products.length > 1 && <div className="absolute right-5 top-5 z-10 flex gap-1.5 lg:right-8">
+            <button type="button" onClick={() => selectProduct(selectedIndex - 1)} className="grid size-9 place-items-center rounded-full border border-white/25 bg-slate-950/35 text-white backdrop-blur transition hover:border-orange-300 hover:bg-orange-500" aria-label="Previous featured product"><ArrowLeft className="size-4" /></button>
+            <button type="button" onClick={() => selectProduct(selectedIndex + 1)} className="grid size-9 place-items-center rounded-full border border-white/25 bg-slate-950/35 text-white backdrop-blur transition hover:border-orange-300 hover:bg-orange-500" aria-label="Next featured product"><ArrowRight className="size-4" /></button>
+          </div>}
           <div className="absolute inset-x-8 bottom-0 top-8 overflow-hidden rounded-t-[12rem] bg-[#d9b98b]">
             {product ? <Image src={product.images[0]} alt={product.name} fill priority unoptimized={typeof product.images[0] === "string" && product.images[0].startsWith("data:")} sizes="50vw" className="object-cover" /> : <div className="size-full bg-orange-100" />}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-white/5" />
           </div>
-          <div className="absolute bottom-10 left-1 rounded-2xl border border-white/20 bg-white/95 p-4 text-slate-950 shadow-2xl backdrop-blur dark:bg-slate-900/95 dark:text-white lg:left-0">
+          <div className="absolute bottom-8 left-5 right-5 rounded-2xl border border-white/20 bg-white/95 p-4 text-slate-950 shadow-2xl backdrop-blur dark:bg-slate-900/95 dark:text-white lg:bottom-10 lg:left-0 lg:right-auto">
             {product && <><p className="text-[10px] font-bold uppercase tracking-[.15em] text-orange-500">Featured product</p><p className="mt-1 max-w-[150px] text-sm font-extrabold">{product.name}</p><div className="mt-2 flex items-center gap-1 text-xs"><Star className="size-3.5 fill-amber-400 text-amber-400" /> <b>{product.rating}</b><span className="text-slate-400">({product.reviewsCount})</span></div></>}
           </div>
+          {products.length > 1 && <div className="absolute bottom-5 left-5 right-5 flex max-w-[calc(100%-2.5rem)] gap-2 lg:bottom-10 lg:left-auto lg:right-8">
+            {products.map((item, index) => <Link key={item.id} href={`/product/${item.slug}`} onMouseEnter={() => setSelectedIndex(index)} onFocus={() => setSelectedIndex(index)} className={`group flex w-24 items-center gap-2 rounded-xl border p-1.5 text-left backdrop-blur transition sm:w-32 ${index === selectedIndex ? "border-orange-300 bg-white text-slate-950" : "border-white/25 bg-slate-950/35 text-white hover:border-orange-300"}`} aria-label={`View ${item.name}`}>
+              <Image src={item.images[0]} alt="" width={42} height={42} unoptimized={typeof item.images[0] === "string" && item.images[0].startsWith("data:")} className="size-10 shrink-0 rounded-lg object-cover" />
+              <span className="min-w-0"><span className="block truncate text-[10px] font-extrabold sm:text-xs">{item.name}</span><span className="mt-0.5 block text-[10px] opacity-70">View product</span></span>
+            </Link>)}
+          </div>}
         </div>
       </div>
     </section>

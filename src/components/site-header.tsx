@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ChevronDown,
   ShieldCheck,
   Heart,
   LogOut,
@@ -20,14 +19,12 @@ import {
 import { Logo } from "@/components/logo";
 import { useCart } from "@/components/providers";
 import { signoutAction } from "@/app/auth/actions";
-import type { Category } from "@/lib/types";
 
 type HeaderProps = {
-  categories: Category[];
   user: { email?: string | null; name?: string | null; isAdmin?: boolean; isSeller?: boolean } | null;
 };
 
-export function SiteHeader({ categories, user }: HeaderProps) {
+export function SiteHeader({ user }: HeaderProps) {
   const router = useRouter();
   const { itemCount } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -167,10 +164,10 @@ export function SiteHeader({ categories, user }: HeaderProps) {
                 <form action={signoutAction}>
                   <button
                     type="submit"
-                    className="hidden h-11 items-center gap-2 rounded-xl bg-orange-500 px-3 text-xs font-extrabold text-white shadow-sm transition hover:bg-orange-600 sm:flex"
+                    className="hidden h-8 items-center gap-1.5 rounded-lg bg-orange-500 px-2 text-[11px] font-extrabold text-white shadow-sm transition hover:bg-orange-600 sm:flex"
                     title="Sign out"
                   >
-                    <LogOut className="size-4" />
+                    <LogOut className="size-3.5" />
                     <span className="hidden xl:inline">Sign out</span>
                   </button>
                 </form>
@@ -222,21 +219,9 @@ export function SiteHeader({ categories, user }: HeaderProps) {
             </Link>
             <Link
               href="/search"
-              className="flex items-center gap-1 text-slate-950 dark:text-white"
+              className="text-slate-950 dark:text-white"
             >
-              Categories <ChevronDown className="size-3" />
-            </Link>
-            {categories.slice(0, 6).map((category) => (
-              <Link
-                key={category.id}
-                href={`/search?category=${category.slug}`}
-                className="transition hover:text-orange-500"
-              >
-                {category.name}
-              </Link>
-            ))}
-            <Link href="/search?deal=true" className="text-rose-600">
-              Today&apos;s deals
+              Categories
             </Link>
             {user?.isAdmin ? (
               <Link
@@ -320,9 +305,9 @@ export function SiteHeader({ categories, user }: HeaderProps) {
                 >
                   <button
                     type="submit"
-                    className="flex w-full items-center gap-2 rounded-xl bg-orange-500 px-3 py-2.5 text-left text-xs font-extrabold text-white hover:bg-orange-600"
+                    className="flex w-fit items-center gap-1.5 rounded-lg bg-orange-500 px-2.5 py-2 text-left text-[11px] font-extrabold text-white hover:bg-orange-600"
                   >
-                    <LogOut className="size-4" /> Sign out
+                    <LogOut className="size-3.5" /> Sign out
                   </button>
                 </form>
               </>
@@ -347,16 +332,13 @@ export function SiteHeader({ categories, user }: HeaderProps) {
             >
               Home
             </Link>
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/search?category=${category.slug}`}
-                onClick={() => setMenuOpen(false)}
-                className="border-b border-slate-100 py-3.5 font-semibold dark:border-white/10"
-              >
-                {category.name}
-              </Link>
-            ))}
+            <Link
+              href="/search"
+              onClick={() => setMenuOpen(false)}
+              className="border-b border-slate-100 py-3.5 font-semibold dark:border-white/10"
+            >
+              Categories
+            </Link>
             {!user && <Link
               href="/seller"
               onClick={() => setMenuOpen(false)}

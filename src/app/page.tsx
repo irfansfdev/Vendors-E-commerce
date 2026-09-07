@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import {
   Benefits,
-  CategoryGrid,
   Hero,
   ProductGrid,
   SectionHeading,
@@ -13,18 +12,13 @@ import { getStorefrontData } from "@/lib/storefront";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const { products, categories, shops, isLive } = await getStorefrontData();
+  const { products, shops, isLive } = await getStorefrontData();
 
   return (
     <main>
+      <Hero products={products.slice(0, 3)} />
       <div className="mx-auto max-w-[1440px] px-4 pt-5 sm:px-6 sm:pt-7 lg:px-8">
-        <Hero product={products[0]} />
         <div className="mt-5"><Benefits /></div>
-
-        <section className="py-14 sm:py-20">
-          <SectionHeading eyebrow="Find your thing" title="Shop by category" />
-          <CategoryGrid categories={categories} />
-        </section>
 
         <section className="pb-16">
           <SectionHeading eyebrow="Picked for you" title="A few good things" href="/search" linkLabel="View all products" />

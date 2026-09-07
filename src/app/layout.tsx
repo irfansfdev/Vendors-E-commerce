@@ -4,7 +4,6 @@ import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
-import { getStorefrontData } from "@/lib/storefront";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,7 +22,7 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const [user, storefront] = await Promise.all([getCurrentUser(), getStorefrontData()]);
+  const user = await getCurrentUser();
   const supabase = user ? await createClient() : null;
   const sellerCheck = user && supabase
     ? await Promise.all([
@@ -38,7 +37,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <Providers>
           <SiteHeader
-            categories={storefront.categories}
             user={user ? { email: user.email, name: String(user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? ""), isAdmin: user.app_metadata?.is_admin === true, isSeller } : null}
           />
           {children}
