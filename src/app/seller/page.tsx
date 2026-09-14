@@ -34,5 +34,19 @@ export default async function SellerPage() {
     supabase.from("shop_orders").select("*").eq("shop_id", shopId).order("created_at", { ascending: false }).limit(25),
     supabase.from("payouts").select("*").eq("shop_id", shopId).order("created_at", { ascending: false }).limit(12),
   ]);
-  return <SellerDashboard shop={shop} role={role} products={(productsResult.data ?? []) as Record<string, unknown>[]} orders={(ordersResult.data ?? []) as Record<string, unknown>[]} payouts={(payoutsResult.data ?? []) as Record<string, unknown>[]} />;
+  const shopOrders = (ordersResult.data ?? []) as Record<string, unknown>[];
+  const parentOrderIds = shopOrders.map((order) => String(order.parent_order_id ?? "")).filter(Boolean);
+  const { data: parentOrders } = parentOrderIds.length
+    ? await supabase.from("orders").select("id, payment_status, paid_at, total_amount").in("id", parentOrderIds)
+    : { data: [] };
+  const parentById = new Map((parentOrders ?? []).map((order) => [String(order.id), order as Record<string, unknown>]));
+  const dashboardOrders = shopOrders.map((order) => {
+    const parent = parentById.get(String(order.parent_order_id ?? ""));
+    return {
+      ...order,
+      payment_status: parent?.payment_status ?? order.payment_status,
+      paid_at: parent?.paid_at ?? order.paid_at,
+    };
+  });
+  return <SellerDashboard shop={shop} role={role} products={(productsResult.data ?? []) as Record<string, unknown>[]} orders={dashboardOrders} payouts={(payoutsResult.data ?? []) as Record<string, unknown>[]} />;
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Toaster, toast } from "sonner";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { CartLine, Product, ProductVariant } from "@/lib/types";
 
@@ -26,20 +27,49 @@ export function useCart() {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [lines, setLines] = useState<CartLine[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      return JSON.parse(localStorage.getItem("vendra-cart") ?? "[]") as CartLine[];
-    } catch {
-      localStorage.removeItem("vendra-cart");
-      return [];
-    }
-  });
-  const [ready] = useState(true);
+  const pathname = usePathname();
+  const [cartOwner, setCartOwner] = useState("guest");
+  const [lines, setLines] = useState<CartLine[]>([]);
+  const [ready, setReady] = useState(false);
+
+  function storageKey(owner: string) {
+    return `vendra-cart:${owner}`;
+  }
 
   useEffect(() => {
-    if (ready) localStorage.setItem("vendra-cart", JSON.stringify(lines));
-  }, [lines, ready]);
+    let active = true;
+    const supabase = createClient();
+
+    function readCart(owner: string) {
+      try {
+        return JSON.parse(localStorage.getItem(storageKey(owner)) ?? "[]") as CartLine[];
+      } catch {
+        localStorage.removeItem(storageKey(owner));
+        return [];
+      }
+    }
+
+    async function loadCart(userId?: string) {
+      const owner = userId ? `user:${userId}` : "guest";
+      if (!active) return;
+      setCartOwner(owner);
+      setLines(readCart(owner));
+      setReady(true);
+    }
+
+    void supabase.auth.getUser().then(({ data }: { data: { user: { id: string } | null } }) => loadCart(data.user?.id));
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+      void loadCart(session?.user.id);
+    });
+    return () => {
+      active = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    if (ready) localStorage.setItem(storageKey(cartOwner), JSON.stringify(lines));
+  }, [cartOwner, lines, ready]);
 
   useEffect(() => {
     const theme = localStorage.getItem("vendra-theme");
@@ -56,8 +86,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "product_variants" }, () => router.refresh())
       .on("postgres_changes", { event: "*", schema: "public", table: "cart_items" }, () => router.refresh())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload: { new: Record<string, unknown> }) => {
-        const row = payload.new as { title?: string; message?: string };
-        toast.info(row.title ?? "New notification", { description: row.message });
+        const row = payload.new as { title?: string; body?: string };
+        toast.info(row.title ?? "New notification", { description: row.body });
       })
       .subscribe();
 
@@ -98,7 +128,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  const clearCart = useCallback(() => setLines([]), []);
+  const clearCart = useCallback(() => {
+    setLines([]);
+    localStorage.removeItem(storageKey(cartOwner));
+  }, [cartOwner]);
   const value = useMemo(
     () => ({
       lines,

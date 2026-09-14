@@ -3,6 +3,7 @@
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function updateShopStatusAction(shopId: string, status: 'active' | 'suspended' | 'rejected') {
   try {
@@ -160,5 +161,36 @@ export async function updatePayoutStatusAction(payoutId: string, status: "approv
     return { success: true };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Could not update payout." };
+  }
+}
+
+export async function updateAdminOrderStatus(formData: FormData): Promise<void> {
+  try {
+    if (!(await requireAdmin())) return;
+    const orderId = String(formData.get("orderId") ?? "").trim();
+    const status = String(formData.get("status") ?? "").toLowerCase();
+    const transitions: Record<string, string[]> = {
+      pending: ["confirmed", "processing", "cancelled"],
+      confirmed: ["processing", "cancelled"],
+      processing: ["shipped", "cancelled"],
+      shipped: ["delivered"],
+      delivered: ["completed"],
+      completed: [],
+      cancelled: [],
+    };
+    if (!orderId || !Object.values(transitions).some((values) => values.includes(status))) return;
+
+    const supabase = await createClient();
+    const { data: current, error: readError } = await supabase.from("orders").select("status").eq("id", orderId).maybeSingle();
+    if (readError || !current || !transitions[String(current.status ?? "pending").toLowerCase()]?.includes(status)) return;
+    const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
+    if (error) return;
+    const { data: childOrders } = await supabase.from("shop_orders").select("id").eq("parent_order_id", orderId);
+    if (childOrders?.length) await supabase.from("shop_orders").update({ order_status: status }).eq("parent_order_id", orderId);
+    revalidatePath("/admin/orders", "page");
+    redirect("/admin/orders");
+  } catch (error) {
+    if (error && typeof error === "object" && "digest" in error && String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")) throw error;
+    console.error("Could not update admin order status", error);
   }
 }

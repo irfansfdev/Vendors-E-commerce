@@ -1,0 +1,14 @@
+import type { Metadata } from "next";
+import { moderateReviewAction } from "@/app/actions/reviews";
+import { createClient } from "@/lib/supabase/server";
+import { Star } from "lucide-react";
+
+export const metadata: Metadata = { title: "Reviews | BabulShop" };
+export const dynamic = "force-dynamic";
+
+export default async function AdminReviewsPage() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("product_reviews").select("*, products(title)").order("created_at", { ascending: false });
+  const reviews = (data ?? []) as Record<string, unknown>[];
+  return <div className="p-8"><div className="mb-8"><p className="text-[11px] font-black uppercase tracking-[.18em] text-orange-500">Trust and safety</p><h1 className="mt-2 text-3xl font-black">Reviews</h1><p className="mt-1 text-slate-500">Approve customer feedback before it appears on product pages.</p></div><section className="space-y-4">{error ? <p className="surface p-6 text-sm text-rose-600">Could not load reviews: {error.message}</p> : reviews.length === 0 ? <p className="surface p-12 text-center text-slate-500">No reviews yet.</p> : reviews.map((review) => { const product = review.products as Record<string, unknown> | null; const status = String(review.status); return <article key={String(review.id)} className="surface p-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-wider text-orange-500">{String(product?.title ?? review.product_id)}</p><div className="mt-2 flex text-amber-400">{[1,2,3,4,5].map((star) => <Star key={star} className={`size-4 ${star <= Number(review.rating) ? "fill-current" : ""}`} />)}</div></div><span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${status === "approved" ? "bg-emerald-100 text-emerald-700" : status === "rejected" ? "bg-rose-100 text-rose-700" : "bg-orange-100 text-orange-700"}`}>{status}</span></div><p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">{String(review.review)}</p>{status === "pending" && <div className="mt-5 flex gap-2"><form action={moderateReviewAction}><input type="hidden" name="id" value={String(review.id)} /><input type="hidden" name="status" value="approved" /><button className="button-primary bg-emerald-600 hover:bg-emerald-700">Approve</button></form><form action={moderateReviewAction}><input type="hidden" name="id" value={String(review.id)} /><input type="hidden" name="status" value="rejected" /><button className="button-secondary text-rose-600">Reject</button></form></div>}</article>; })}</section></div>;
+}

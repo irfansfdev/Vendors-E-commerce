@@ -43,13 +43,16 @@ export async function publishProductAction(input: PublishProductInput): Promise<
 
     const shopResult = await supabase
       .from("shops")
-      .select("owner_id, slug")
+      .select("owner_id, slug, status")
       .eq("id", input.shopId)
       .maybeSingle();
 
     const isAuthorized = Boolean(memberResult.data) || (shopResult.data as { owner_id?: string } | null)?.owner_id === user.id;
     if (!isAuthorized) {
       return { success: false, error: "You do not have owner/manager permissions for this shop." };
+    }
+    if (String((shopResult.data as { status?: string } | null)?.status ?? "") !== "active") {
+      return { success: false, error: "Only active shops can publish products." };
     }
 
     // 1. Insert the product using the columns in the catalog schema.
@@ -146,7 +149,7 @@ export async function deleteProductAction(productId: string) {
   const user = await getCurrentUser();
   if (!user) return { success: false, error: "Please sign in." };
   const supabase = await createClient();
-  const { data: shop } = await supabase.from("shops").select("id").eq("owner_id", user.id).limit(1).maybeSingle();
+  const { data: shop } = await supabase.from("shops").select("id").eq("owner_id", user.id).eq("status", "active").limit(1).maybeSingle();
   if (!shop?.id) return { success: false, error: "Seller shop not found." };
   const { error } = await supabase.from("products").delete().eq("id", productId).eq("shop_id", shop.id);
   if (error) return { success: false, error: error.message };
@@ -171,7 +174,7 @@ export async function updateProductAction(productId: string, formData: FormData)
     return { success: false, error: "Please provide a valid title, description, and price." };
   }
   const supabase = await createClient();
-  const { data: shop } = await supabase.from("shops").select("id").eq("owner_id", user.id).limit(1).maybeSingle();
+  const { data: shop } = await supabase.from("shops").select("id").eq("owner_id", user.id).eq("status", "active").limit(1).maybeSingle();
   if (!shop?.id) return { success: false, error: "Seller shop not found." };
   const { error } = await supabase.from("products").update({ title, description, price, compare_at_price: compareAtPriceValue ? Number(compareAtPriceValue) : null, category_id: categoryId || null, status }).eq("id", productId).eq("shop_id", shop.id);
   if (error) return { success: false, error: error.message };

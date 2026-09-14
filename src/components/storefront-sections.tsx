@@ -68,8 +68,9 @@ export function CategoryGrid({ categories }: { categories: Category[] }) {
   return <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:gap-5">{categories.slice(0, 6).map((category) => <Link key={category.id} href={`/search?category=${category.slug}`} className="group text-center"><div className="relative mx-auto aspect-square overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200/70 transition duration-300 group-hover:-translate-y-1 group-hover:ring-orange-300 dark:bg-white/5 dark:ring-white/10"><Image src={category.imageUrl} alt="" fill unoptimized={typeof category.imageUrl === "string" && category.imageUrl.startsWith("data:")} sizes="160px" className="object-cover transition duration-500 group-hover:scale-105" /></div><h3 className="mt-3 text-xs font-bold sm:text-sm">{category.name}</h3><p className="mt-0.5 hidden text-[11px] text-slate-400 sm:block">{category.productCount} {category.productCount === 1 ? "product" : "products"}</p></Link>)}</div>;
 }
 
-export function ProductGrid({ products }: { products: Product[] }) {
-  return <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">{products.map((product) => <ProductCard key={product.id} product={product} />)}</div>;
+export function ProductGrid({ products, columns = 5 }: { products: Product[]; columns?: 3 | 4 | 5 }) {
+  const gridClass = columns === 3 ? "grid-cols-2 md:grid-cols-3" : columns === 4 ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
+  return <div className={`grid gap-x-3 gap-y-8 sm:gap-x-5 ${gridClass}`}>{products.map((product) => <ProductCard key={product.id} product={product} />)}</div>;
 }
 
 export function ShopGrid({ shops }: { shops: Shop[] }) {

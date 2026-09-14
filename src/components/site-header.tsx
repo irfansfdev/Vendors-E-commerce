@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { useCart } from "@/components/providers";
+import { NotificationBell } from "@/components/notification-bell";
 import { signoutAction } from "@/app/auth/actions";
 
 type HeaderProps = {
@@ -139,6 +140,7 @@ export function SiteHeader({ user }: HeaderProps) {
             >
               <Heart className="size-[19px]" />
             </Link>
+            {user && <NotificationBell />}
             <Link href="/cart" className="header-action relative">
               <span className="relative">
                 <ShoppingCart className="size-5" />
@@ -221,7 +223,7 @@ export function SiteHeader({ user }: HeaderProps) {
               href="/search"
               className="text-slate-950 dark:text-white"
             >
-              Categories
+              Products
             </Link>
             {user?.isAdmin ? (
               <Link

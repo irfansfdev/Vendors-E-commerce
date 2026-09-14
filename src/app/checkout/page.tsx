@@ -16,7 +16,7 @@ export default async function CheckoutPage() {
     if (result.error) result = await supabase.from("addresses").select("*").eq("profile_id", user.id);
     addresses = (result.data ?? []).map((value) => {
       const row = value as Record<string, unknown>;
-      return { id: String(row.id), label: String(row.label ?? row.type ?? "Shipping address"), line: [row.address_line_1 ?? row.line1 ?? row.street, row.address_line_2 ?? row.line2].filter(Boolean).join(", "), city: [row.city, row.state, row.postal_code ?? row.zip_code, row.country].filter(Boolean).join(", "), isDefault: Boolean(row.is_default ?? row.default) };
+      return { id: String(row.id), label: String(row.label ?? row.type ?? "Shipping address"), line: [row.address_line1 ?? row.address_line_1 ?? row.line1 ?? row.street, row.address_line2 ?? row.address_line_2 ?? row.line2].filter(Boolean).join(", "), city: [row.city, row.state, row.postal_code ?? row.zip_code, row.country].filter(Boolean).join(", "), isDefault: Boolean(row.is_default ?? row.default) };
     });
   } catch {
     addresses = [];
