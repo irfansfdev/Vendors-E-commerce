@@ -2,18 +2,300 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { updateProductAction } from "@/app/seller/products/actions";
 
-type Variant = { id: string; sku: string; price: number; compare_at_price: number | null; stock: number; attributes: Record<string, string> };
-type Props = { productId: string; product: Record<string, unknown>; categories: Array<{ id: string; name: string }>; variants: Variant[]; images: string[] };
+type Variant = {
+  id: string;
+  sku: string;
+  price: number;
+  compare_at_price: number | null;
+  stock: number;
+  attributes: Record<string, string>;
+};
+type Props = {
+  productId: string;
+  product: Record<string, unknown>;
+  categories: Array<{ id: string; name: string }>;
+  variants: Variant[];
+  images: string[];
+};
 
-export function ProductEditForm({ productId, product, categories, variants: initialVariants, images: initialImages }: Props) {
+export function ProductEditForm({
+  productId,
+  product,
+  categories,
+  variants: initialVariants,
+  images: initialImages,
+}: Props) {
   const router = useRouter();
-  const [variants, setVariants] = useState(initialVariants.length ? initialVariants : [{ id: crypto.randomUUID(), sku: "SKU-001", price: Number(product.price ?? 0), compare_at_price: null, stock: 0, attributes: { Color: "", Size: "" } }]);
+  const [variants, setVariants] = useState(
+    initialVariants.length
+      ? initialVariants
+      : [
+          {
+            id: crypto.randomUUID(),
+            sku: "SKU-001",
+            price: Number(product.price ?? 0),
+            compare_at_price: null,
+            stock: 0,
+            attributes: { Color: "", Size: "" },
+          },
+        ],
+  );
   const [images, setImages] = useState(initialImages);
   const [message, setMessage] = useState("");
-  function updateVariant(index: number, field: string, value: string) { setVariants((current) => current.map((variant, itemIndex) => itemIndex === index ? { ...variant, [field]: field === "price" || field === "compare_at_price" || field === "stock" ? Number(value) : value } : variant)); }
-  function updateAttribute(index: number, key: string, value: string) { setVariants((current) => current.map((variant, itemIndex) => itemIndex === index ? { ...variant, attributes: { ...variant.attributes, [key]: value } } : variant)); }
-  async function submit(formData: FormData) { setMessage("Saving..."); formData.set("variants_json", JSON.stringify(variants)); images.forEach((image) => formData.append("existing_images", image)); const result = await updateProductAction(productId, formData); if (!result.success) { setMessage(result.error ?? "Could not save changes."); return; } router.push("/seller/products"); router.refresh(); }
-  return <form action={submit} encType="multipart/form-data" className="surface space-y-6 p-6 sm:p-8"><label className="block"><span className="mb-2 block text-xs font-bold">Product title</span><input name="title" required defaultValue={String(product.title ?? "")} className="field" /></label><label className="block"><span className="mb-2 block text-xs font-bold">Description</span><textarea name="description" required defaultValue={String(product.description ?? "")} className="field min-h-32 resize-y" /></label><div className="grid gap-5 sm:grid-cols-2"><label className="block"><span className="mb-2 block text-xs font-bold">Category</span><select name="category_id" defaultValue={String(product.category_id ?? "")} className="field"><option value="">Choose category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label><label className="block"><span className="mb-2 block text-xs font-bold">Status</span><select name="status" defaultValue={String(product.status ?? "published")} className="field"><option value="published">Published</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="block"><span className="mb-2 block text-xs font-bold">Base price (Rs)</span><input name="price" type="number" min="0" step="0.01" required defaultValue={Number(product.price ?? 0)} className="field" /></label><label className="block"><span className="mb-2 block text-xs font-bold">Compare at price (Rs)</span><input name="compare_at_price" type="number" min="0" step="0.01" defaultValue={String(product.compare_at_price ?? "")} className="field" /></label></div><section><div className="mb-3 flex items-center justify-between"><div><h2 className="font-black">Variants, stock & options</h2><p className="text-xs text-slate-500">Edit every SKU, price, color, size, and stock quantity.</p></div><button type="button" className="button-secondary" onClick={() => setVariants((current) => [...current, { id: crypto.randomUUID(), sku: `SKU-${current.length + 1}`, price: Number(product.price ?? 0), compare_at_price: null, stock: 0, attributes: { Color: "", Size: "" } }])}>Add variant</button></div><div className="space-y-3">{variants.map((variant, index) => <div key={variant.id} className="grid gap-3 rounded-xl border border-slate-200 p-4 dark:border-white/10 sm:grid-cols-5"><input value={variant.sku} onChange={(event) => updateVariant(index, "sku", event.target.value)} className="field" placeholder="SKU" /><input type="number" min="0" step="0.01" value={variant.price} onChange={(event) => updateVariant(index, "price", event.target.value)} className="field" placeholder="Price" /><input type="number" min="0" value={variant.stock} onChange={(event) => updateVariant(index, "stock", event.target.value)} className="field" placeholder="Stock" /><input value={variant.attributes.Color ?? variant.attributes.color ?? ""} onChange={(event) => updateAttribute(index, "Color", event.target.value)} className="field" placeholder="Color" /><input value={variant.attributes.Size ?? variant.attributes.size ?? ""} onChange={(event) => updateAttribute(index, "Size", event.target.value)} className="field" placeholder="Size" /></div>)}</div></section><section><h2 className="font-black">Product gallery</h2><div className="mt-3 flex flex-wrap gap-3">{images.map((image) => <div key={image} className="relative"><img src={image} alt="Product" className="size-24 rounded-xl object-cover" /><button type="button" onClick={() => setImages((current) => current.filter((item) => item !== image))} className="absolute -right-2 -top-2 grid size-6 place-items-center rounded-full bg-rose-500 text-xs text-white">x</button></div>)}</div><input name="images" type="file" accept="image/png,image/jpeg,image/webp" multiple className="field mt-4 p-2 text-xs" /></section>{message && <p className="text-sm font-bold text-orange-600">{message}</p>}<div className="flex justify-end gap-3"><button type="button" onClick={() => router.push("/seller/products")} className="button-secondary">Cancel</button><button className="button-primary bg-orange-500 hover:bg-orange-600">Save changes</button></div></form>;
+  function updateVariant(index: number, field: string, value: string) {
+    setVariants((current) =>
+      current.map((variant, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...variant,
+              [field]:
+                field === "price" ||
+                field === "compare_at_price" ||
+                field === "stock"
+                  ? Number(value)
+                  : value,
+            }
+          : variant,
+      ),
+    );
+  }
+  function updateAttribute(index: number, key: string, value: string) {
+    setVariants((current) =>
+      current.map((variant, itemIndex) =>
+        itemIndex === index
+          ? { ...variant, attributes: { ...variant.attributes, [key]: value } }
+          : variant,
+      ),
+    );
+  }
+  async function submit(formData: FormData) {
+    setMessage("Saving...");
+    formData.set("variants_json", JSON.stringify(variants));
+    images.forEach((image) => formData.append("existing_images", image));
+    const result = await updateProductAction(productId, formData);
+    if (!result.success) {
+      setMessage(result.error ?? "Could not save changes.");
+      return;
+    }
+    router.push("/seller/products");
+    router.refresh();
+  }
+  return (
+    <form
+      action={submit}
+      encType="multipart/form-data"
+      className="surface space-y-6 p-6 sm:p-8"
+    >
+      <label className="block">
+        <span className="mb-2 block text-xs font-bold">Product title</span>
+        <input
+          name="title"
+          required
+          defaultValue={String(product.title ?? "")}
+          className="field"
+        />
+      </label>
+      <label className="block">
+        <span className="mb-2 block text-xs font-bold">Description</span>
+        <textarea
+          name="description"
+          required
+          defaultValue={String(product.description ?? "")}
+          className="field min-h-32 resize-y"
+        />
+      </label>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-2 block text-xs font-bold">Category</span>
+          <select
+            name="category_id"
+            defaultValue={String(product.category_id ?? "")}
+            className="field"
+          >
+            <option value="">Choose category</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-2 block text-xs font-bold">Status</span>
+          <select
+            name="status"
+            defaultValue={String(product.status ?? "published")}
+            className="field"
+          >
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+            <option value="archived">Archived</option>
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-2 block text-xs font-bold">Base price (Rs)</span>
+          <input
+            name="price"
+            type="number"
+            min="0"
+            step="0.01"
+            required
+            defaultValue={Number(product.price ?? 0)}
+            className="field"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-2 block text-xs font-bold">
+            Compare at price (Rs)
+          </span>
+          <input
+            name="compare_at_price"
+            type="number"
+            min="0"
+            step="0.01"
+            defaultValue={String(product.compare_at_price ?? "")}
+            className="field"
+          />
+        </label>
+      </div>
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="font-black">Variants, stock & options</h2>
+            <p className="text-xs text-slate-500">
+              Edit every SKU, price, color, size, and stock quantity.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="button-secondary"
+            onClick={() =>
+              setVariants((current) => [
+                ...current,
+                {
+                  id: crypto.randomUUID(),
+                  sku: `SKU-${current.length + 1}`,
+                  price: Number(product.price ?? 0),
+                  compare_at_price: null,
+                  stock: 0,
+                  attributes: { Color: "", Size: "" },
+                },
+              ])
+            }
+          >
+            Add variant
+          </button>
+        </div>
+        <div className="space-y-3">
+          {variants.map((variant, index) => (
+            <div
+              key={variant.id}
+              className="grid gap-3 rounded-xl border border-slate-200 p-4 dark:border-white/10 sm:grid-cols-5"
+            >
+              <input
+                value={variant.sku}
+                onChange={(event) =>
+                  updateVariant(index, "sku", event.target.value)
+                }
+                className="field"
+                placeholder="SKU"
+              />
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={variant.price}
+                onChange={(event) =>
+                  updateVariant(index, "price", event.target.value)
+                }
+                className="field"
+                placeholder="Price"
+              />
+              <input
+                type="number"
+                min="0"
+                value={variant.stock}
+                onChange={(event) =>
+                  updateVariant(index, "stock", event.target.value)
+                }
+                className="field"
+                placeholder="Stock"
+              />
+              <input
+                value={
+                  variant.attributes.Color ?? variant.attributes.color ?? ""
+                }
+                onChange={(event) =>
+                  updateAttribute(index, "Color", event.target.value)
+                }
+                className="field"
+                placeholder="Color"
+              />
+              <input
+                value={variant.attributes.Size ?? variant.attributes.size ?? ""}
+                onChange={(event) =>
+                  updateAttribute(index, "Size", event.target.value)
+                }
+                className="field"
+                placeholder="Size"
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+      <section>
+        <h2 className="font-black">Product gallery</h2>
+        <div className="mt-3 flex flex-wrap gap-3">
+          {images.map((image) => (
+            <div key={image} className="relative">
+              <Image
+                src={image}
+                alt="Product"
+                width={96}
+                height={96}
+                unoptimized
+                className="size-24 rounded-xl object-cover"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setImages((current) =>
+                    current.filter((item) => item !== image),
+                  )
+                }
+                className="absolute -right-2 -top-2 grid size-6 place-items-center rounded-full bg-rose-500 text-xs text-white"
+              >
+                x
+              </button>
+            </div>
+          ))}
+        </div>
+        <input
+          name="images"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          multiple
+          className="field mt-4 p-2 text-xs"
+        />
+      </section>
+      {message && (
+        <p className="text-sm font-bold text-orange-600">{message}</p>
+      )}
+      <div className="flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => router.push("/seller/products")}
+          className="button-secondary"
+        >
+          Cancel
+        </button>
+        <button className="button-primary bg-orange-500 hover:bg-orange-600">
+          Save changes
+        </button>
+      </div>
+    </form>
+  );
 }

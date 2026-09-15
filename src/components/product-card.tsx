@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, Plus, Star } from "lucide-react";
+import { Heart, ShoppingBag, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/components/providers";
 import type { Product } from "@/lib/types";
@@ -28,20 +28,23 @@ export function ProductCard({ product }: { product: Product }) {
 
   return (
     <article className="group min-w-0">
-      <div className="relative aspect-[.88] overflow-hidden rounded-2xl bg-slate-100 dark:bg-white/5">
+      <div className="relative aspect-[.86] overflow-hidden rounded-[1.35rem] bg-slate-100 shadow-sm ring-1 ring-slate-200/70 transition duration-300 group-hover:shadow-xl group-hover:shadow-slate-900/10 dark:bg-white/5 dark:ring-white/10">
         <Link href={`/product/${product.slug}`} aria-label={`View ${product.name}`} className="absolute inset-0">
-          <Image src={product.images[0]} alt={product.name} fill unoptimized={typeof product.images[0] === "string" && product.images[0].startsWith("data:")} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw" className="object-cover transition duration-500 group-hover:scale-[1.045]" />
+          <Image src={product.images[0]} alt={product.name} fill unoptimized={typeof product.images[0] === "string" && product.images[0].startsWith("data:")} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw" className="object-cover transition duration-700 ease-out group-hover:scale-[1.045]" />
         </Link>
-        {product.badge && <span className="absolute left-3 top-3 rounded-md bg-white/95 px-2 py-1 text-[9px] font-extrabold tracking-[.08em] text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white">{product.badge}</span>}
-        <button onClick={toggleWishlist} className={`absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-white/90 shadow-sm backdrop-blur transition hover:scale-105 ${liked ? "text-rose-500" : "text-slate-600"}`} aria-label="Toggle wishlist"><Heart className={`size-[17px] ${liked ? "fill-current" : ""}`} /></button>
-        <button onClick={() => addItem(product, product.variants[0])} disabled={product.stock < 1} className="absolute bottom-3 right-3 grid size-10 translate-y-2 place-items-center rounded-full bg-slate-950 text-white opacity-0 shadow-lg transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-400 group-hover:translate-y-0 group-hover:opacity-100 sm:size-11" aria-label="Quick add to cart"><Plus className="size-5" /></button>
+        {product.badge && <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1.5 text-[9px] font-extrabold uppercase tracking-[.1em] text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white">{product.badge}</span>}
+        <button type="button" onClick={toggleWishlist} className={`absolute right-3 top-3 grid size-10 translate-y-1 place-items-center rounded-full bg-white/90 text-slate-600 opacity-0 shadow-md backdrop-blur transition duration-300 hover:scale-105 hover:text-rose-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 dark:bg-slate-950/85 dark:text-slate-300 ${liked ? "text-rose-500" : ""}`} aria-label={liked ? "Remove from wishlist" : "Add to wishlist"}><Heart className={`size-[17px] ${liked ? "fill-current" : ""}`} /></button>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100" />
+        <div className="absolute inset-x-3 bottom-3 translate-y-2 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+          <button type="button" onClick={() => addItem(product, product.variants[0])} disabled={product.stock < 1} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-950/95 px-3 text-xs font-black text-white shadow-lg backdrop-blur transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-500" aria-label={`Add ${product.name} to cart`}><ShoppingBag className="size-4" /> {product.stock > 0 ? "Add to cart" : "Out of stock"}</button>
+        </div>
       </div>
-      <div className="pt-3">
-        <Link href={`/shop/${product.shop.slug}`} className="text-[11px] font-semibold uppercase tracking-[.1em] text-slate-400 hover:text-orange-500">{product.shop.name}</Link>
-        <Link href={`/product/${product.slug}`}><h3 className="mt-1 truncate text-sm font-bold tracking-[-.01em] text-slate-900 transition hover:text-orange-500 dark:text-white sm:text-[15px]">{product.name}</h3></Link>
-        <div className="mt-1.5 flex items-center justify-between gap-2">
-          <div className="flex items-baseline gap-2"><span className="text-sm font-extrabold text-slate-950 dark:text-white sm:text-base">{formatCurrency(product.price, product.currency)}</span>{product.compareAtPrice && <span className="text-xs text-slate-400 line-through">{formatCurrency(product.compareAtPrice, product.currency)}</span>}</div>
-          <span className="hidden items-center gap-1 text-xs font-semibold text-slate-500 sm:flex"><Star className="size-3 fill-amber-400 text-amber-400" />{product.rating.toFixed(1)}</span>
+      <div className="px-1 pt-4">
+        <Link href={`/shop/${product.shop.slug}`} className="text-[10px] font-bold uppercase tracking-[.14em] text-slate-400 transition hover:text-orange-500">{product.shop.name}</Link>
+        <Link href={`/product/${product.slug}`}><h3 className="mt-1.5 truncate text-[15px] font-extrabold tracking-[-.02em] text-slate-900 transition hover:text-orange-500 dark:text-white">{product.name}</h3></Link>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="flex items-baseline gap-2"><span className="text-base font-black text-slate-950 dark:text-white">{formatCurrency(product.price, product.currency)}</span>{product.compareAtPrice && <span className="text-xs text-slate-400 line-through">{formatCurrency(product.compareAtPrice, product.currency)}</span>}</div>
+          <span className="hidden items-center gap-1 text-[11px] font-bold text-slate-500 sm:flex"><Star className="size-3 fill-amber-400 text-amber-400" />{product.rating.toFixed(1)}</span>
         </div>
       </div>
     </article>

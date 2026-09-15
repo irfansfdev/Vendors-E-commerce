@@ -44,7 +44,8 @@ export async function createShopRequestAction(formData: FormData) {
       upload(formData.get("banner"), "banner"),
     ]);
 
-    const { error } = await supabase.from("shops").insert({ id: shopId, owner_id: user.id, name, slug, description, logo_url: logoUrl, banner_url: bannerUrl, status: "pending" });
+    const ownerName = String(user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email?.split("@")[0] ?? "").trim();
+    const { error } = await supabase.from("shops").insert({ id: shopId, owner_id: user.id, owner_name: ownerName || null, name, slug, description, logo_url: logoUrl, banner_url: bannerUrl, status: "pending" });
     if (error) {
       if (error.code === "23505") return { success: false, error: "This shop URL is already in use. Please choose another one." };
       if (error.code === "42501" || error.message.toLowerCase().includes("row-level security")) {

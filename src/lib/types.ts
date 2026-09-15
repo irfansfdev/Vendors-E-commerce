@@ -41,6 +41,7 @@ export type Product = {
   badge?: string;
   images: string[];
   category: Category;
+  categories?: Category[];
   shop: Shop;
   variants: ProductVariant[];
 };

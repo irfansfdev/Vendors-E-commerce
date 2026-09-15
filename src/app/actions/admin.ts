@@ -5,19 +5,19 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export async function updateShopStatusAction(shopId: string, status: 'active' | 'suspended' | 'rejected') {
+export async function updateShopStatusAction(shopId: string, status: 'active' | 'suspended' | 'rejected', rejectionReason?: string) {
   try {
     if (!(await requireAdmin())) {
       return { success: false, error: "Unauthorized. Admin access required." };
     }
 
     const supabase = await createClient();
-    const { error } = await supabase
-      .from("shops")
-      .update({ status })
-      .eq("id", shopId);
-
-    if (error) throw new Error(error.message);
+    const statusResult = await supabase.from("shops").update({ status }).eq("id", shopId);
+    if (statusResult.error) throw new Error(statusResult.error.message);
+    if (status === "rejected" && rejectionReason?.trim()) {
+      const reasonResult = await supabase.from("shops").update({ rejection_reason: rejectionReason.trim() }).eq("id", shopId);
+      if (reasonResult.error && !reasonResult.error.message.toLowerCase().includes("rejection_reason")) throw new Error(reasonResult.error.message);
+    }
 
     revalidatePath("/admin");
     revalidatePath("/admin/shops");
@@ -41,6 +41,17 @@ export async function removeShopAction(shopId: string) {
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Could not remove shop." };
   }
+}
+
+export async function updateAdminProductStatusAction(productId: string, status: "published" | "draft" | "archived") {
+  try {
+    if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
+    const supabase = await createClient();
+    const { error } = await supabase.from("products").update({ status, is_active: status === "published" }).eq("id", productId);
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/admin/products"); revalidatePath("/admin/shops");
+    return { success: true };
+  } catch (error) { return { success: false, error: error instanceof Error ? error.message : "Could not update product status." }; }
 }
 
 async function requireAdmin() {

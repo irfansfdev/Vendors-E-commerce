@@ -8,7 +8,8 @@ type Row = Record<string, unknown>;
 type Props = { shop: Row; products: Row[]; orders: Row[]; payouts: Row[]; orderItems: Row[]; role: string };
 
 function orderAmount(order: Row) {
-  return Number(order.calculated_total ?? order.total_amount ?? order.subtotal ?? order.total ?? order.amount ?? order.order_total ?? order.grand_total ?? order.total_price ?? 0);
+  const direct = Number(order.gross_amount ?? order.calculated_total ?? order.total_amount ?? order.subtotal ?? order.total ?? order.amount ?? order.order_total ?? order.grand_total ?? order.total_price ?? 0);
+  return direct > 0 ? direct : Number(order.seller_earnings ?? 0) + Number(order.platform_commission ?? 0);
 }
 
 function orderStatus(order: Row) {
@@ -27,7 +28,7 @@ function getDailySales(orders: Row[]) {
     const date = new Date(today);
     date.setHours(0, 0, 0, 0);
     date.setDate(today.getDate() - (6 - index));
-    const key = date.toISOString().slice(0, 10);
+    const key = date.toLocaleDateString("en-CA");
     return {
       label: date.toLocaleDateString("en-US", { weekday: "short" }),
       amount: orders.filter((order) => isPaid(order) && String(order.paid_at ?? order.delivered_at ?? order.updated_at ?? order.created_at ?? "").slice(0, 10) === key).reduce((sum, order) => sum + orderAmount(order), 0),

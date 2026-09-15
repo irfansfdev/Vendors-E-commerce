@@ -183,6 +183,7 @@ function mapProduct(
 ): Product | null {
   const embeddedShop = firstRecord(raw.shops ?? raw.shop);
   const embeddedCategory = firstRecord(raw.categories ?? raw.category ?? raw.product_categories);
+  const embeddedCategories = rows(raw.product_categories ?? raw.categories).map((item) => firstRecord(item.categories ?? item.category ?? item)).filter((item) => Object.keys(item).length > 0).map(mapCategory).filter((item): item is Category => item !== null);
   const id = text(raw.id);
   const name = text(raw.name ?? raw.title);
   if (!id || !name) return null;
@@ -199,23 +200,14 @@ function mapProduct(
   const variantRows = rows(raw.product_variants ?? raw.variants);
   const variants = variantRows.length
     ? variantRows.map((item, variantIndex) => mapVariant(item, variantIndex, price))
-    : [
-        {
-          id: `var-${id}`,
-          name: "Standard",
-          sku: `SKU-${id.slice(0, 6)}`,
-          price,
-          stock: number(raw.stock_quantity ?? raw.stock, 10),
-          attributes: { Option: "Standard" },
-        },
-      ];
+    : [];
 
   const extractedImages = extractProductImages(raw);
   const images = extractedImages.length
     ? extractedImages
     : ["https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"];
 
-  const stock = variants.reduce((total, variant) => total + variant.stock, 0);
+  const stock = variants.length ? variants.reduce((total, variant) => total + variant.stock, 0) : number(raw.stock_quantity ?? raw.stock, 0);
 
   return {
     id,
@@ -231,6 +223,7 @@ function mapProduct(
     badge: text(raw.badge) || (bool(raw.is_featured) ? "FEATURED" : undefined),
     images,
     category: productCategory,
+    categories: embeddedCategories.length ? embeddedCategories : productCategory ? [productCategory] : [],
     shop: productShop,
     variants,
   };
@@ -336,6 +329,15 @@ export async function getProductBySlug(slug: string) {
       .from("products")
       .select("*")
       .eq("slug", slug)
+      .limit(1)
+      .maybeSingle();
+  }
+
+  if (productResult.error || !productResult.data) {
+    productResult = await supabase
+      .from("products")
+      .select("*, shops(*), product_variants(*), product_images(*), product_categories(categories(*))")
+      .eq("id", slug)
       .limit(1)
       .maybeSingle();
   }

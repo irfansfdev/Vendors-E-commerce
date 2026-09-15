@@ -1,0 +1,5 @@
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { AdminProductForm } from "@/components/admin-product-form";
+export const dynamic = "force-dynamic";
+export default async function NewAdminProductPage({ searchParams }: { searchParams: Promise<{ shop?: string }> }) { const { shop: initialShopId } = await searchParams; const supabase = await createClient(); const [{ data: shops }, { data: categories }] = await Promise.all([supabase.from("shops").select("id,name").eq("status", "active").order("name"), supabase.from("categories").select("id,name").order("name")]); return <div className="mx-auto max-w-5xl p-6 sm:p-8"><Link href="/admin/products" className="text-sm font-bold text-slate-500">Back to products</Link><h1 className="mb-8 mt-4 text-3xl font-black">Add product</h1><AdminProductForm initialShopId={initialShopId} shops={(shops ?? []) as { id: string; name: string }[]} categories={(categories ?? []) as { id: string; name: string }[]} /></div>; }

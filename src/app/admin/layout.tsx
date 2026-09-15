@@ -15,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const navItems = [
     { name: "Overview", href: "/admin", icon: LayoutDashboard },
     { name: "Shops", href: "/admin/shops", icon: Store },
+    { name: "Products", href: "/admin/products", icon: Boxes },
     { name: "Categories", href: "/admin/categories", icon: Boxes },
     { name: "Global Orders", href: "/admin/orders", icon: ShoppingCart },
     { name: "Reviews", href: "/admin/reviews", icon: Star },
@@ -24,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-[#080d18]">
       {/* Admin Sidebar */}
-      <aside className="w-64 border-r bg-white px-4 py-6 dark:bg-slate-950 dark:border-slate-800">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 self-start overflow-y-auto border-r bg-white px-4 py-6 dark:border-slate-800 dark:bg-slate-950 lg:block">
         <h2 className="mb-8 px-2 text-xl font-black text-orange-500 tracking-tight">BabulShop Admin</h2>
         <nav className="space-y-1">
           {navItems.map((item) => {
