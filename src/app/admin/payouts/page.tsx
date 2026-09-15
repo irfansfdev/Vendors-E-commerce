@@ -12,6 +12,7 @@ function value(row: Row, ...keys: string[]) { return keys.map((key) => row[key])
 
 export default async function AdminPayoutsPage() {
   const supabase = await createClient();
+  await supabase.rpc("refresh_payout_availability");
   let { data, error } = await supabase.from("payouts").select("*").order("created_at", { ascending: false }).limit(200);
   if (error) {
     const fallback = await supabase.from("transactions").select("*").order("created_at", { ascending: false }).limit(200);

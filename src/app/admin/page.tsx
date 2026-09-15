@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Boxes, Check, CircleDollarSign, ShoppingBag, Store, UsersRound, X } from "lucide-react";
+import { ArrowRight, BadgeDollarSign, Boxes, Check, CircleDollarSign, ShoppingBag, Store, UsersRound, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils";
 import { updateShopStatusAction } from "../actions/admin";
@@ -9,26 +9,49 @@ export const metadata: Metadata = { title: "Platform Admin | BabulShop" };
 export const dynamic = "force-dynamic";
 
 type Transaction = { amount?: number | string | null; platform_fee?: number | string | null; created_at?: string | null };
+type Order = { total_amount?: number | string | null; subtotal?: number | string | null; total?: number | string | null; amount?: number | string | null; order_total?: number | string | null; grand_total?: number | string | null; total_price?: number | string | null; status?: string | null; created_at?: string | null; updated_at?: string | null };
+type ShopOrder = Order & { order_status?: string | null; platform_commission?: number | string | null; seller_earnings?: number | string | null; refund_amount?: number | string | null };
+type Payout = { amount?: number | string | null; net_amount?: number | string | null; status?: string | null };
 type PendingShop = { id: string; name?: string | null; slug?: string | null; created_at?: string | null };
 
 export default async function AdminPage() {
   const supabase = await createClient();
-  const [orders, shops, profiles, categories, transactions, pendingResponse] = await Promise.all([
+  await supabase.rpc("refresh_payout_availability");
+  const [orders, shops, profiles, categories, transactions, allOrdersResponse, fulfilledOrdersResponse, fulfilledShopOrdersResponse, payoutsResponse, pendingResponse] = await Promise.all([
     supabase.from("orders").select("id", { count: "exact", head: true }),
     supabase.from("shops").select("id", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase.from("categories").select("id", { count: "exact", head: true }),
     supabase.from("transactions").select("amount, platform_fee, created_at").eq("status", "completed").order("created_at", { ascending: false }).limit(1000),
+    supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(1000),
+    supabase.from("orders").select("*").in("status", ["delivered", "completed"]).order("created_at", { ascending: false }).limit(1000),
+    supabase.from("shop_orders").select("*").in("order_status", ["delivered", "completed"]).order("created_at", { ascending: false }).limit(1000),
+    supabase.from("payouts").select("amount, net_amount, status").limit(2000),
     supabase.from("shops").select("id, name, slug, created_at", { count: "exact" }).eq("status", "pending").order("created_at", { ascending: false }).limit(6),
   ]);
   const rows = (transactions.data ?? []) as Transaction[];
+  const allOrders = (allOrdersResponse.data ?? []) as Order[];
+  const fulfilledOrders = (fulfilledOrdersResponse.data ?? []) as Order[];
+  const fulfilledShopOrders = (fulfilledShopOrdersResponse.data ?? []) as ShopOrder[];
+  const payouts = (payoutsResponse.data ?? []) as Payout[];
   const pendingShops = (pendingResponse.data ?? []) as PendingShop[];
-  const volume = rows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  const transactionVolume = rows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  const totalGmv = allOrders.reduce((sum, row) => sum + Number(row.total_amount ?? row.subtotal ?? row.total ?? 0), 0);
+  const orderAmount = (row: Order) => Number(row.total_amount ?? row.subtotal ?? row.total ?? row.amount ?? row.order_total ?? row.grand_total ?? row.total_price ?? 0);
+  const shipmentVolume = fulfilledShopOrders.reduce((sum, row) => sum + orderAmount(row), 0);
+  const orderVolume = fulfilledOrders.reduce((sum, row) => sum + orderAmount(row), 0);
+  const volume = transactionVolume || shipmentVolume || orderVolume;
   const revenue = rows.reduce((sum, row) => sum + Number(row.platform_fee ?? 0), 0);
+  const deliveredSales = shipmentVolume || orderVolume;
+  const platformCommission = fulfilledShopOrders.reduce((sum, row) => sum + Number(row.platform_commission ?? 0), 0);
+  const sellerEarnings = fulfilledShopOrders.reduce((sum, row) => sum + Number(row.seller_earnings ?? 0), 0);
+  const pendingPayouts = payouts.filter((payout) => String(payout.status).toLowerCase() === "pending").reduce((sum, payout) => sum + Number(payout.net_amount ?? payout.amount ?? 0), 0);
+  const refunds = fulfilledShopOrders.reduce((sum, row) => sum + Number(row.refund_amount ?? 0), 0);
+  const chartRows = rows.length ? rows : fulfilledShopOrders.length ? fulfilledShopOrders.map((order) => ({ amount: orderAmount(order), created_at: order.updated_at ?? order.created_at })) : fulfilledOrders.map((order) => ({ amount: orderAmount(order), created_at: order.updated_at ?? order.created_at }));
   return <div className="mx-auto max-w-[1440px] p-5 sm:p-8">
     <header className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-[11px] font-black uppercase tracking-[.18em] text-orange-500">BabulShop control room</p><h1 className="mt-2 text-4xl font-black tracking-[-.055em]">Platform overview</h1><p className="mt-2 text-sm text-slate-500">Marketplace health, sales, and vendor requests at a glance.</p></div><Link href="/admin/shops?status=pending" className="button-primary bg-orange-500 hover:bg-orange-600">Review requests <ArrowRight className="size-4" /></Link></header>
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><MetricCard icon={CircleDollarSign} label="Gross volume" value={formatCurrency(volume)} detail="Completed transactions" /><MetricCard icon={CircleDollarSign} label="Platform revenue" value={formatCurrency(revenue)} detail="Fees collected" tone="text-emerald-600" /><MetricCard icon={Store} label="Active shops" value={shops.count ?? 0} detail="Currently selling" /><MetricCard icon={ShoppingBag} label="Total orders" value={orders.count ?? 0} detail="Across the platform" /></section>
-    <section className="mt-6 grid gap-6 xl:grid-cols-[1.45fr_.8fr]"><SalesChart points={buildChart(rows)} /><section className="surface p-6"><div className="flex items-start justify-between"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Platform snapshot</p><h2 className="mt-1 text-xl font-black">System health</h2></div><span className="grid size-10 place-items-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><Store className="size-5" /></span></div><div className="mt-6 space-y-4"><SnapshotRow label="Categories" value={categories.count ?? 0} icon={Boxes} /><SnapshotRow label="Registered users" value={profiles.count ?? 0} icon={UsersRound} /><SnapshotRow label="Pending requests" value={pendingResponse.count ?? pendingShops.length} icon={Store} /></div><div className="mt-6 flex items-center gap-2 border-t border-slate-100 pt-5 text-xs font-bold text-emerald-600 dark:border-white/10"><span className="size-2 rounded-full bg-emerald-500" /> All systems operational</div></section></section>
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><MetricCard icon={CircleDollarSign} label="Total GMV" value={formatCurrency(totalGmv || volume)} detail="All order value" /><MetricCard icon={CircleDollarSign} label="Delivered sales" value={formatCurrency(deliveredSales)} detail={`${fulfilledShopOrders.length || fulfilledOrders.length} delivered orders`} /><MetricCard icon={CircleDollarSign} label="Platform commission" value={formatCurrency(platformCommission || revenue)} detail="Commission earned" tone="text-emerald-600" /><MetricCard icon={CircleDollarSign} label="Seller earnings" value={formatCurrency(sellerEarnings)} detail="After commission" /><MetricCard icon={BadgeDollarSign} label="Pending payouts" value={formatCurrency(pendingPayouts)} detail="Awaiting settlement" /><MetricCard icon={Store} label="Active shops" value={shops.count ?? 0} detail="Currently selling" /><MetricCard icon={ShoppingBag} label="Completed orders" value={fulfilledShopOrders.length || fulfilledOrders.length} detail={`of ${orders.count ?? 0} total orders`} /><MetricCard icon={CircleDollarSign} label="Refunds" value={formatCurrency(refunds)} detail="Returns and refunds" /></section>
+    <section className="mt-6 grid gap-6 xl:grid-cols-[1.45fr_.8fr]"><SalesChart points={buildChart(chartRows)} /><section className="surface p-6"><div className="flex items-start justify-between"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Platform snapshot</p><h2 className="mt-1 text-xl font-black">System health</h2></div><span className="grid size-10 place-items-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><Store className="size-5" /></span></div><div className="mt-6 space-y-4"><SnapshotRow label="Categories" value={categories.count ?? 0} icon={Boxes} /><SnapshotRow label="Registered users" value={profiles.count ?? 0} icon={UsersRound} /><SnapshotRow label="Pending requests" value={pendingResponse.count ?? pendingShops.length} icon={Store} /></div><div className="mt-6 flex items-center gap-2 border-t border-slate-100 pt-5 text-xs font-bold text-emerald-600 dark:border-white/10"><span className="size-2 rounded-full bg-emerald-500" /> All systems operational</div></section></section>
     <section className="surface mt-6 overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-6 dark:border-white/10"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Needs your attention</p><h2 className="mt-1 text-xl font-black">Pending shop requests</h2></div><Link href="/admin/shops?status=pending" className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-orange-500">View all <ArrowRight className="size-4" /></Link></div>{pendingShops.length === 0 ? <p className="p-10 text-center text-sm text-slate-500">No pending shop requests right now.</p> : <div className="divide-y dark:divide-white/10">{pendingShops.map((shop) => <div key={shop.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-extrabold">{shop.name ?? "Unnamed shop"}</h3><p className="mt-1 text-xs text-slate-500">BabulShop.com/shop/{shop.slug} · {shop.created_at ? new Date(shop.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recently requested"}</p></div><div className="flex gap-2"><form action={async () => { "use server"; await updateShopStatusAction(shop.id, "active"); }}><button className="button-secondary text-emerald-700"><Check className="size-4" /> Approve</button></form><form action={async () => { "use server"; await updateShopStatusAction(shop.id, "rejected"); }}><button className="button-secondary text-rose-700"><X className="size-4" /> Reject</button></form></div></div>)}</div>}</section>
   </div>;
 }

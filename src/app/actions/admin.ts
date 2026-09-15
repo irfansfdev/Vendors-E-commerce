@@ -154,7 +154,7 @@ export async function updatePayoutStatusAction(payoutId: string, status: "approv
   try {
     if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
     const supabase = await createClient();
-    let result = await supabase.from("payouts").update({ status }).eq("id", payoutId);
+    let result = await supabase.from("payouts").update({ status, ...(status === "paid" ? { paid_at: new Date().toISOString() } : {}) }).eq("id", payoutId);
     if (result.error) result = await supabase.from("transactions").update({ status }).eq("id", payoutId);
     if (result.error) return { success: false, error: result.error.message };
     revalidatePath("/admin/payouts");
@@ -169,25 +169,17 @@ export async function updateAdminOrderStatus(formData: FormData): Promise<void> 
     if (!(await requireAdmin())) return;
     const orderId = String(formData.get("orderId") ?? "").trim();
     const status = String(formData.get("status") ?? "").toLowerCase();
-    const transitions: Record<string, string[]> = {
-      pending: ["confirmed", "processing", "cancelled"],
-      confirmed: ["processing", "cancelled"],
-      processing: ["shipped", "cancelled"],
-      shipped: ["delivered"],
-      delivered: ["completed"],
-      completed: [],
-      cancelled: [],
-    };
-    if (!orderId || !Object.values(transitions).some((values) => values.includes(status))) return;
+    const statuses = ["pending", "processing", "shipped", "delivered", "completed", "cancelled"];
+    if (!orderId || !statuses.includes(status)) return;
 
     const supabase = await createClient();
-    const { data: current, error: readError } = await supabase.from("orders").select("status").eq("id", orderId).maybeSingle();
-    if (readError || !current || !transitions[String(current.status ?? "pending").toLowerCase()]?.includes(status)) return;
     const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
     if (error) return;
     const { data: childOrders } = await supabase.from("shop_orders").select("id").eq("parent_order_id", orderId);
     if (childOrders?.length) await supabase.from("shop_orders").update({ order_status: status }).eq("parent_order_id", orderId);
     revalidatePath("/admin/orders", "page");
+    revalidatePath("/account");
+    revalidatePath(`/account/orders/${orderId}`);
     redirect("/admin/orders");
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error && String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")) throw error;

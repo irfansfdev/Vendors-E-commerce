@@ -29,15 +29,16 @@ export default async function SellerPage() {
   if (!shop?.id) return <SellerOnboarding />;
   if (String(shop.status ?? "") !== "active") return <ShopPendingNotice shop={shop} />;
   const shopId = String(shop.id);
+  await supabase.rpc("refresh_payout_availability");
   const [productsResult, ordersResult, payoutsResult] = await Promise.all([
     supabase.from("products").select("*").eq("shop_id", shopId).order("created_at", { ascending: false }).limit(25),
     supabase.from("shop_orders").select("*").eq("shop_id", shopId).order("created_at", { ascending: false }).limit(25),
-    supabase.from("payouts").select("*").eq("shop_id", shopId).order("created_at", { ascending: false }).limit(12),
+    supabase.from("payouts").select("*").eq("shop_id", shopId).order("created_at", { ascending: false }).limit(1000),
   ]);
   const shopOrders = (ordersResult.data ?? []) as Record<string, unknown>[];
   const parentOrderIds = shopOrders.map((order) => String(order.parent_order_id ?? "")).filter(Boolean);
   const { data: parentOrders } = parentOrderIds.length
-    ? await supabase.from("orders").select("id, payment_status, paid_at, total_amount").in("id", parentOrderIds)
+    ? await supabase.from("orders").select("*").in("id", parentOrderIds)
     : { data: [] };
   const parentById = new Map((parentOrders ?? []).map((order) => [String(order.id), order as Record<string, unknown>]));
   const dashboardOrders = shopOrders.map((order) => {
@@ -48,5 +49,8 @@ export default async function SellerPage() {
       paid_at: parent?.paid_at ?? order.paid_at,
     };
   });
-  return <SellerDashboard shop={shop} role={role} products={(productsResult.data ?? []) as Record<string, unknown>[]} orders={dashboardOrders} payouts={(payoutsResult.data ?? []) as Record<string, unknown>[]} />;
+  const { data: orderItems } = parentOrderIds.length
+    ? await supabase.from("order_items").select("quantity, shop_order_id, product_variants(price, products(price))").in("shop_order_id", shopOrders.map((order) => String(order.id)))
+    : { data: [] };
+  return <SellerDashboard shop={shop} role={role} products={(productsResult.data ?? []) as Record<string, unknown>[]} orders={dashboardOrders} payouts={(payoutsResult.data ?? []) as Record<string, unknown>[]} orderItems={(orderItems ?? []) as Record<string, unknown>[]} />;
 }

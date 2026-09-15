@@ -8,23 +8,8 @@ const deliveredStatuses = ["delivered", "completed"];
 
 async function userPurchasedDeliveredProduct(userId: string, productId: string) {
   const supabase = await createClient();
-  const { data: orders } = await supabase.from("orders").select("id, status, shop_orders(id, order_status)").eq("customer_id", userId);
-  const deliveredOrderIds = (orders ?? []).flatMap((order) => {
-    const parentDelivered = deliveredStatuses.includes(String(order.status).toLowerCase()) ? [order.id] : [];
-    const children = Array.isArray(order.shop_orders) ? order.shop_orders : [];
-    return [...parentDelivered, ...children.filter((child) => deliveredStatuses.includes(String(child.order_status).toLowerCase())).map((child) => child.id)];
-  });
-  if (!deliveredOrderIds.length) return false;
-
-  for (const table of ["order_items", "shop_order_items"]) {
-    const byOrder = await supabase.from(table).select("order_id, shop_order_id, product_id, product_variant_id, product_variants(product_id)").in("order_id", deliveredOrderIds);
-    const byShopOrder = await supabase.from(table).select("order_id, shop_order_id, product_id, product_variant_id, product_variants(product_id)").in("shop_order_id", deliveredOrderIds);
-    const items = [...(byOrder.data ?? []), ...(byShopOrder.data ?? [])];
-    if (items.some((item) => {
-      const variants = Array.isArray(item.product_variants) ? item.product_variants : [item.product_variants];
-      return item.product_id === productId || variants.some((variant) => variant?.product_id === productId);
-    })) return true;
-  }
+  const { data, error } = await supabase.rpc("can_review_product", { target_user_id: userId, target_product_id: productId });
+  if (!error) return Boolean(data);
   return false;
 }
 
