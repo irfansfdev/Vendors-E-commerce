@@ -175,12 +175,68 @@ export async function updatePayoutStatusAction(payoutId: string, status: "approv
   }
 }
 
+export async function createRiderAction(formData: FormData) {
+  try {
+    if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
+    const fullName = String(formData.get("fullName") ?? "").trim();
+    if (!email || fullName.length < 2) return { success: false, error: "Name and email are required." };
+    const supabase = await createClient();
+    const { error } = await supabase.from("delivery_profiles").insert({ email, full_name: fullName, phone: String(formData.get("phone") ?? "").trim() || null, cnic: String(formData.get("cnic") ?? "").trim() || null, vehicle_type: String(formData.get("vehicleType") ?? "").trim() || null, vehicle_number: String(formData.get("vehicleNumber") ?? "").trim() || null, license_number: String(formData.get("licenseNumber") ?? "").trim() || null, status: "approved", approved_by: (await getCurrentUser())?.id, approved_at: new Date().toISOString() });
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/admin/riders");
+    return { success: true };
+  } catch (error) { return { success: false, error: error instanceof Error ? error.message : "Could not create rider." }; }
+}
+
+export async function createRiderFormAction(formData: FormData) {
+  const result = await createRiderAction(formData);
+  if (!result.success) throw new Error(result.error);
+}
+
+export async function updateRiderStatusAction(riderId: string, status: "approved" | "rejected" | "suspended" | "inactive", rejectionReason?: string) {
+  try {
+    if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
+    const supabase = await createClient();
+    const user = await getCurrentUser();
+    const { error } = await supabase.from("delivery_profiles").update({ status, rejection_reason: status === "rejected" ? rejectionReason?.trim() || null : null, approved_by: status === "approved" ? user?.id : null, approved_at: status === "approved" ? new Date().toISOString() : null }).eq("id", riderId);
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/admin/riders");
+    revalidatePath("/rider");
+    return { success: true };
+  } catch (error) { return { success: false, error: error instanceof Error ? error.message : "Could not update rider." }; }
+}
+
+export async function updateRiderStatusFormAction(formData: FormData) {
+  const result = await updateRiderStatusAction(String(formData.get("riderId") ?? ""), String(formData.get("status") ?? "inactive") as "approved" | "rejected" | "suspended" | "inactive", String(formData.get("rejectionReason") ?? ""));
+  if (!result.success) throw new Error(result.error);
+}
+
+export async function deleteRiderAction(riderId: string) {
+  try {
+    if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
+    const supabase = await createClient();
+    const { count, error: assignmentError } = await supabase.from("delivery_assignments").select("id", { count: "exact", head: true }).eq("rider_id", riderId);
+    if (assignmentError) return { success: false, error: assignmentError.message };
+    if ((count ?? 0) > 0) return { success: false, error: "This rider has delivery history. Suspend the rider instead of deleting the record." };
+    const { error } = await supabase.from("delivery_profiles").delete().eq("id", riderId);
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/admin/riders");
+    return { success: true };
+  } catch (error) { return { success: false, error: error instanceof Error ? error.message : "Could not delete rider." }; }
+}
+
+export async function deleteRiderFormAction(formData: FormData) {
+  const result = await deleteRiderAction(String(formData.get("riderId") ?? ""));
+  if (!result.success) throw new Error(result.error);
+}
+
 export async function updateAdminOrderStatus(formData: FormData): Promise<void> {
   try {
     if (!(await requireAdmin())) return;
     const orderId = String(formData.get("orderId") ?? "").trim();
     const status = String(formData.get("status") ?? "").toLowerCase();
-    const statuses = ["pending", "processing", "shipped", "delivered", "completed", "cancelled"];
+    const statuses = ["pending", "processing", "shipped", "out_for_delivery", "delivered", "completed", "cancelled"];
     if (!orderId || !statuses.includes(status)) return;
 
     const supabase = await createClient();

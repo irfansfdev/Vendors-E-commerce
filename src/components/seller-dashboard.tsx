@@ -5,7 +5,7 @@ import { BadgeDollarSign, Box, CircleDollarSign, ExternalLink, Plus, ShoppingBag
 import { formatCurrency } from "@/lib/utils";
 
 type Row = Record<string, unknown>;
-type Props = { shop: Row; products: Row[]; orders: Row[]; payouts: Row[]; orderItems: Row[]; role: string };
+type Props = { shop: Row; products: Row[]; orders: Row[]; payouts: Row[]; earnings: Row[]; orderItems: Row[]; role: string };
 
 function orderAmount(order: Row) {
   const direct = Number(order.gross_amount ?? order.calculated_total ?? order.total_amount ?? order.subtotal ?? order.total ?? order.amount ?? order.order_total ?? order.grand_total ?? order.total_price ?? 0);
@@ -18,8 +18,11 @@ function orderStatus(order: Row) {
 
 function isPaid(order: Row) {
   const paymentStatus = String(order.payment_status ?? "").toLowerCase();
-  const fulfillmentStatus = orderStatus(order);
-  return ["paid", "partially_refunded"].includes(paymentStatus) || ["delivered", "completed"].includes(fulfillmentStatus);
+  return ["paid", "partially_refunded"].includes(paymentStatus);
+}
+
+function isDelivered(order: Row) {
+  return ["delivered", "completed"].includes(orderStatus(order));
 }
 
 function getDailySales(orders: Row[]) {
@@ -31,12 +34,12 @@ function getDailySales(orders: Row[]) {
     const key = date.toLocaleDateString("en-CA");
     return {
       label: date.toLocaleDateString("en-US", { weekday: "short" }),
-      amount: orders.filter((order) => isPaid(order) && String(order.paid_at ?? order.delivered_at ?? order.updated_at ?? order.created_at ?? "").slice(0, 10) === key).reduce((sum, order) => sum + orderAmount(order), 0),
+      amount: orders.filter((order) => isDelivered(order) && String(order.delivered_at ?? order.updated_at ?? order.created_at ?? "").slice(0, 10) === key).reduce((sum, order) => sum + orderAmount(order), 0),
     };
   });
 }
 
-export function SellerDashboard({ shop, products, orders, payouts, orderItems, role }: Props) {
+export function SellerDashboard({ shop, products, orders, payouts, earnings, orderItems, role }: Props) {
   const totalsByOrder = new Map<string, number>();
   for (const item of orderItems) {
     const variant = item.product_variants as Row | null;
@@ -46,21 +49,22 @@ export function SellerDashboard({ shop, products, orders, payouts, orderItems, r
   }
   const ordersWithTotals: Row[] = orders.map((order) => ({ ...order, calculated_total: totalsByOrder.get(String(order.id)) ?? order.calculated_total }));
   const paidOrders = ordersWithTotals.filter(isPaid);
-  const deliveredOrders = ordersWithTotals.filter((order) => ["delivered", "completed"].includes(orderStatus(order)));
-  const sales = paidOrders.reduce((total, order) => total + orderAmount(order), 0);
+  const deliveredOrders = ordersWithTotals.filter(isDelivered);
+  const sales = ordersWithTotals.reduce((total, order) => total + orderAmount(order), 0);
   const deliveredSales = deliveredOrders.reduce((total, order) => total + orderAmount(order), 0);
   const dailySales = getDailySales(ordersWithTotals);
   const maxDailySales = Math.max(...dailySales.map((day) => day.amount), 1);
+  const earningAmount = (earning: Row) => Number(earning.net_amount ?? 0);
   const payoutAmount = (payout: Row) => Number(payout.net_amount ?? payout.amount ?? 0);
-  const pendingPayout = payouts.filter((payout) => String(payout.status).toLowerCase() === "pending").reduce((total, payout) => total + payoutAmount(payout), 0);
-  const availableBalance = payouts.filter((payout) => String(payout.status).toLowerCase() === "available").reduce((total, payout) => total + payoutAmount(payout), 0);
+  const pendingPayout = earnings.filter((earning) => ["pending", "held"].includes(String(earning.status).toLowerCase())).reduce((total, earning) => total + earningAmount(earning), 0);
+  const availableBalance = earnings.filter((earning) => String(earning.status).toLowerCase() === "available").reduce((total, earning) => total + earningAmount(earning), 0);
   const paidPayout = payouts.filter((payout) => String(payout.status).toLowerCase() === "paid").reduce((total, payout) => total + payoutAmount(payout), 0);
   const refunds = orders.reduce((total, order) => total + Number(order.refund_amount ?? 0), 0);
   const productsSold = orderItems.reduce((total, item) => total + Number(item.quantity ?? 0), 0);
   const shopSlug = String(shop.slug ?? "");
   const shopName = String(shop.name ?? "Your shop");
   const metrics: Array<{ icon: LucideIcon; value: string | number; label: string; detail: string }> = [
-    { icon: CircleDollarSign, value: formatCurrency(sales), label: "Gross sales", detail: `${paidOrders.length} paid/delivered orders` },
+    { icon: CircleDollarSign, value: formatCurrency(sales), label: "Gross sales", detail: `${ordersWithTotals.length} shop orders` },
     { icon: CircleDollarSign, value: formatCurrency(deliveredSales), label: "Delivered sales", detail: `${deliveredOrders.length} delivered orders` },
     { icon: ShoppingBag, value: orders.length, label: "Seller orders", detail: `${orders.filter((order) => orderStatus(order) === "processing").length} processing` },
     { icon: Box, value: productsSold, label: "Products sold", detail: `${products.length} active products` },

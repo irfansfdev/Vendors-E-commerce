@@ -65,7 +65,7 @@ export async function publishProductAction(input: PublishProductInput): Promise<
       description: input.description,
       price: input.price,
       compare_at_price: input.compare_at_price,
-      status: "published",
+      status: "pending",
     };
 
     const prodResult = await supabase.from("products").insert(productPayload);

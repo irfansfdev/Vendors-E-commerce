@@ -56,7 +56,7 @@ export default async function AdminShopDetailsPage({
   const { data: variantRows } = productIdsForVariants.length
     ? await supabase
         .from("product_variants")
-        .select("product_id,sku,stock_quantity,stock,price")
+        .select("product_id,sku,stock_quantity,price")
         .in("product_id", productIdsForVariants)
     : { data: [] };
   const variantsByProduct = new Map<string, Row[]>();
@@ -72,7 +72,7 @@ export default async function AdminShopDetailsPage({
       const variants = variantsByProduct.get(String(product.id)) ?? [];
       const variantStock = variants.reduce(
         (total, variant) =>
-          total + Number(variant.stock_quantity ?? variant.stock ?? 0),
+          total + Number(variant.stock_quantity ?? 0),
         0,
       );
       const variantSku = variants
@@ -112,7 +112,7 @@ export default async function AdminShopDetailsPage({
       orderIds.length
         ? supabase
             .from("order_items")
-            .select("*, product_variants(price, products(id,title))")
+            .select("quantity,variant_id,shop_order_id,product_variants(id,product_id,price,products(id,title,price))")
             .in("shop_order_id", orderIds)
         : Promise.resolve({ data: [] }),
       relatedIds.length
@@ -136,7 +136,7 @@ export default async function AdminShopDetailsPage({
   const { data: parentOrders } = parentIds.length
     ? await supabase
         .from("orders")
-        .select("id,customer_id,customer_name,full_name,shipping_address_id")
+        .select("*")
         .in("id", parentIds)
     : { data: [] };
   const addressIds = ((parentOrders ?? []) as Row[])
@@ -145,12 +145,23 @@ export default async function AdminShopDetailsPage({
   const { data: addresses } = addressIds.length
     ? await supabase
         .from("addresses")
-        .select("id,full_name,name")
+        .select("*")
         .in("id", addressIds)
     : { data: [] };
   const profileMap = new Map(
     ((profiles ?? []) as Row[]).map((profile) => [String(profile.id), profile]),
   );
+  const parentCustomerIds = ((parentOrders ?? []) as Row[])
+    .map((order) => String(order.customer_id ?? ""))
+    .filter(Boolean);
+  if (parentCustomerIds.length) {
+    const { data: parentProfiles } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("id", parentCustomerIds);
+    for (const profile of (parentProfiles ?? []) as Row[])
+      profileMap.set(String(profile.id), profile);
+  }
   const reviewUserIds = [
     ...new Set(
       ((reviews ?? []) as Row[])
@@ -209,6 +220,7 @@ export default async function AdminShopDetailsPage({
       address?.name ??
       parent?.customer_name ??
       parent?.full_name ??
+      profileMap.get(String(order.customer_id))?.full_name ??
       order.customer_name;
   }
   const customerMap = new Map<string, Row>();
@@ -229,6 +241,7 @@ export default async function AdminShopDetailsPage({
         address?.name ??
         parent?.customer_name ??
         parent?.full_name ??
+        order.customer_name ??
         profileMap.get(customerId)?.full_name,
       total_orders: 0,
       total_spent: 0,

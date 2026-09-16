@@ -21,11 +21,12 @@ export async function createShopRequestAction(formData: FormData) {
 
     const shopId = crypto.randomUUID();
     const upload = async (value: FormDataEntryValue | null, type: string) => {
-      if (!(value instanceof File) || value.size === 0) return null;
+      if (!value || typeof value === "string" || value.size === 0) return null;
       const extension = value.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${user.id}/${shopId}/${type}-${Date.now()}.${extension}`;
       try {
-        const { error } = await supabase.storage.from("shop-assets").upload(path, value, { upsert: true, contentType: value.type });
+        const bytes = Buffer.from(await value.arrayBuffer());
+        const { error } = await supabase.storage.from("shop-assets").upload(path, bytes, { upsert: true, contentType: value.type, cacheControl: "3600" });
         if (!error) {
           return supabase.storage.from("shop-assets").getPublicUrl(path).data.publicUrl;
         }

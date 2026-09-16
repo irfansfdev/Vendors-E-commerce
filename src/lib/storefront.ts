@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { publicStorageUrl } from "@/lib/media";
 import type { Category, Product, ProductVariant, Shop, StorefrontData } from "@/lib/types";
 
 const record = (value: unknown): Record<string, unknown> =>
@@ -24,19 +25,6 @@ const fallbackCategoryImages: Record<string, string> = {
   art: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=400&q=80",
 };
 
-function storageUrl(bucket: string, value: unknown) {
-  const path = text(value).trim();
-  if (!path || path === "undefined" || path === "null") return "";
-  if (/^https?:\/\//i.test(path) || path.startsWith("data:image/")) return path;
-  const cleanPath = path.replace(/^\/+/, "");
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  if (!baseUrl) return path;
-  if (cleanPath.startsWith(`${bucket}/`)) {
-    return `${baseUrl}/storage/v1/object/public/${cleanPath}`;
-  }
-  return `${baseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
-}
-
 function mapCategory(raw: Record<string, unknown>): Category | null {
   const id = text(raw.id);
   const name = text(raw.name);
@@ -54,9 +42,9 @@ function mapCategory(raw: Record<string, unknown>): Category | null {
 
   let imageUrl = "";
   if (rawImage && typeof rawImage === "string" && rawImage.trim()) {
-    imageUrl = storageUrl("category-images", rawImage);
+    imageUrl = publicStorageUrl("category-images", rawImage);
     if (!imageUrl || imageUrl.endsWith("/undefined") || imageUrl.endsWith("/null")) {
-      imageUrl = storageUrl("shop-assets", rawImage);
+      imageUrl = publicStorageUrl("shop-assets", rawImage);
     }
   }
 
@@ -82,8 +70,8 @@ function mapShop(raw: Record<string, unknown>): Shop | null {
     name,
     slug: text(raw.slug, name.toLowerCase().replace(/[^a-z0-9]+/g, "-")),
     description: text(raw.description),
-    logoUrl: storageUrl("shop-assets", raw.logo_url ?? raw.logo ?? raw.logo_path) || undefined,
-    bannerUrl: storageUrl("shop-assets", raw.banner_url ?? raw.banner ?? raw.banner_path) || undefined,
+    logoUrl: publicStorageUrl("shop-assets", raw.logo_url ?? raw.logo ?? raw.logo_path) || undefined,
+    bannerUrl: publicStorageUrl("shop-assets", raw.banner_url ?? raw.banner ?? raw.banner_path) || undefined,
     rating: number(raw.rating ?? raw.average_rating, 5),
     productCount: number(raw.product_count ?? raw.products_count),
     verified: bool(raw.verified ?? raw.is_verified, true),
@@ -123,13 +111,13 @@ function extractProductImages(raw: Record<string, unknown>): string[] {
 
     for (const item of sorted) {
       if (typeof item === "string" && item.trim()) {
-        const url = storageUrl("product-images", item);
+        const url = publicStorageUrl("product-images", item);
         if (url && !urls.includes(url)) urls.push(url);
       } else if (item && typeof item === "object") {
         const obj = item as Record<string, unknown>;
         const imgVal = obj.image_url ?? obj.url ?? obj.path ?? obj.storage_path ?? obj.src ?? obj.image;
         if (imgVal) {
-          const url = storageUrl("product-images", imgVal);
+          const url = publicStorageUrl("product-images", imgVal);
           if (url && !urls.includes(url)) urls.push(url);
         }
       }
@@ -140,13 +128,13 @@ function extractProductImages(raw: Record<string, unknown>): string[] {
       if (Array.isArray(parsed)) {
         for (const item of parsed) {
           if (typeof item === "string" && item.trim()) {
-            const url = storageUrl("product-images", item);
+            const url = publicStorageUrl("product-images", item);
             if (url && !urls.includes(url)) urls.push(url);
           }
         }
       }
     } catch {
-      const url = storageUrl("product-images", rawImages);
+      const url = publicStorageUrl("product-images", rawImages);
       if (url && !urls.includes(url)) urls.push(url);
     }
   }
@@ -165,7 +153,7 @@ function extractProductImages(raw: Record<string, unknown>): string[] {
 
   for (const field of directFields) {
     if (typeof field === "string" && field.trim()) {
-      const url = storageUrl("product-images", field);
+      const url = publicStorageUrl("product-images", field);
       if (url && !urls.includes(url)) {
         // Direct field image becomes primary if not already in list
         urls.unshift(url);

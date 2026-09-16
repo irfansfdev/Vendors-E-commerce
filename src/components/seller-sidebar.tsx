@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeDollarSign, Box, LayoutDashboard, Settings, ShoppingBag, UsersRound } from "lucide-react";
+import { BadgeDollarSign, Box, LayoutDashboard, Settings, ShoppingBag } from "lucide-react";
 
 const items = [
   { label: "Overview", href: "/seller", icon: LayoutDashboard },
   { label: "Products", href: "/seller/products", icon: Box },
   { label: "Orders", href: "/seller/orders", icon: ShoppingBag },
-  { label: "Staff", href: "/seller/staff", icon: UsersRound },
   { label: "Payouts", href: "/seller/payouts", icon: BadgeDollarSign },
   { label: "Settings", href: "/seller/settings", icon: Settings },
 ];

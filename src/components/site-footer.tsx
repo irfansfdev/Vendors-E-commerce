@@ -20,6 +20,7 @@ export function SiteFooter() {
         </div>
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           {groups.map((group) => <div key={group.title}><h3 className="text-sm font-bold">{group.title}</h3><ul className="mt-4 space-y-3">{group.links.map((link) => <li key={link}><Link href="#" className="text-sm text-slate-500 transition hover:text-orange-500 dark:text-slate-400">{link}</Link></li>)}</ul></div>)}
+          <div><h3 className="text-sm font-bold">Delivery</h3><ul className="mt-4 space-y-3"><li><Link href="/rider/apply" className="text-sm text-slate-500 transition hover:text-orange-500 dark:text-slate-400">Become a rider</Link></li><li><Link href="/account/orders" className="text-sm text-slate-500 transition hover:text-orange-500 dark:text-slate-400">Track deliveries</Link></li></ul></div>
         </div>
       </div>
       <div className="border-t border-slate-200 dark:border-white/10"><div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-4 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:px-6 lg:px-8"><p>© 2026 BabulShop Marketplace. All rights reserved.</p><div className="flex items-center gap-5"><Link href="#">Privacy</Link><Link href="#">Terms</Link><span className="flex items-center gap-1.5"><ShieldCheck className="size-4 text-emerald-500" /> Secure checkout</span></div></div></div>

@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/supabase/server";
-import { LayoutDashboard, Store, Boxes, ShoppingCart, CreditCard, Star } from "lucide-react";
+import { LayoutDashboard, Store, Boxes, ShoppingCart, CreditCard, Star, Bike } from "lucide-react";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -20,6 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { name: "Global Orders", href: "/admin/orders", icon: ShoppingCart },
     { name: "Reviews", href: "/admin/reviews", icon: Star },
     { name: "Payouts", href: "/admin/payouts", icon: CreditCard },
+    { name: "Riders", href: "/admin/riders", icon: Bike },
   ];
 
   return (

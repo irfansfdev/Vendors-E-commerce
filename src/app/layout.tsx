@@ -31,13 +31,17 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       ])
     : null;
   const isSeller = Boolean(sellerCheck?.[0].data || sellerCheck?.[1].data);
+  const riderCheck = user && supabase
+    ? await supabase.from("delivery_profiles").select("status").eq("user_id", user.id).eq("status", "approved").maybeSingle()
+    : null;
+  const isRider = Boolean(riderCheck?.data);
 
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body>
         <Providers>
           <SiteHeader
-            user={user ? { email: user.email, name: String(user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? ""), isAdmin: user.app_metadata?.is_admin === true, isSeller } : null}
+            user={user ? { email: user.email, name: String(user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? ""), isAdmin: user.app_metadata?.is_admin === true, isSeller, isRider } : null}
           />
           {children}
           <SiteFooter />

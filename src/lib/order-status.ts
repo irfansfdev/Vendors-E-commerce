@@ -1,4 +1,4 @@
-const statusPriority = ["pending", "confirmed", "processing", "shipped", "delivered", "completed"];
+const statusPriority = ["pending", "confirmed", "processing", "shipped", "out_for_delivery", "delivered", "completed"];
 
 export function getOrderStatus(order: Record<string, unknown>) {
   const shipments = Array.isArray(order.shop_orders) ? order.shop_orders as Record<string, unknown>[] : [];

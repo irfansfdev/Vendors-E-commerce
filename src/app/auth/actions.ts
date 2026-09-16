@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { safeNextPath } from "@/lib/utils";
+import { getAvailablePortals, getPortalDestination } from "@/lib/portal";
 
 export type AuthState = { error?: string; success?: string };
 
@@ -19,9 +20,8 @@ export async function loginAction(_: AuthState, formData: FormData): Promise<Aut
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: error.message };
-  const destination = data.user.app_metadata?.is_admin === true
-    ? "/admin"
-    : safeNextPath(String(formData.get("next") ?? ""));
+  const requestedPath = safeNextPath(String(formData.get("next") ?? ""));
+  const destination = data.user.app_metadata?.is_admin === true ? "/admin" : getPortalDestination(await getAvailablePortals(data.user.id), requestedPath);
   redirect(destination);
 }
 

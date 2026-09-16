@@ -1,13 +1,33 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgeCheck, CalendarDays, MessageCircle, Star } from "lucide-react";
 import { ProductGrid } from "@/components/storefront-sections";
+import { MediaPreview } from "@/components/media-preview";
 import { getShopBySlug } from "@/lib/storefront";
 import { initials } from "@/lib/utils";
 
 type Params = Promise<{ slug: string }>;
+
+export const dynamic = "force-dynamic";
+
+function Image({
+  src,
+  alt,
+  className,
+  fill,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  fill?: boolean;
+  priority?: boolean;
+  sizes?: string;
+  width?: number;
+  height?: number;
+}) {
+  return <MediaPreview src={src} alt={alt} className={fill ? "absolute inset-0 h-full w-full object-cover" : className ?? ""} fallbackClassName={fill ? "absolute inset-0 grid place-items-center bg-slate-200" : "grid size-full place-items-center bg-orange-100"} />;
+}
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;

@@ -25,3 +25,15 @@ export async function updateSellerOrderStatus(formData: FormData) {
   if (current.parent_order_id) revalidatePath(`/account/orders/${current.parent_order_id}`);
   redirect(`/seller/orders/${orderId}`);
 }
+
+export async function assignRiderAction(formData: FormData) {
+  const { supabase, shop } = await getSellerContext();
+  const orderId = String(formData.get("orderId") ?? "");
+  const riderId = String(formData.get("riderId") ?? "");
+  if (!orderId || !riderId) throw new Error("Choose a rider.");
+  const { data, error } = await supabase.rpc("assign_delivery", { target_shop_order_id: orderId, target_rider_id: riderId });
+  if (error || !data) throw new Error(error?.message ?? "Could not assign rider.");
+  revalidatePath(`/seller/orders/${orderId}`);
+  revalidatePath("/rider");
+  redirect(`/seller/orders/${orderId}`);
+}

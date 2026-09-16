@@ -1,0 +1,20 @@
+"use client";
+
+import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { updateAdminOrderStatus } from "@/app/actions/admin";
+import { formatCurrency } from "@/lib/utils";
+
+type Row = Record<string, unknown>;
+const statuses = ["pending", "processing", "shipped", "delivered", "completed", "cancelled"];
+const pageSize = 10;
+function value(row: Row, ...keys: string[]) { return keys.map((key) => row[key]).find((item) => item !== undefined && item !== null && item !== ""); }
+function badge(status: string) { return status === "completed" || status === "paid" ? "bg-emerald-100 text-emerald-700" : status === "cancelled" ? "bg-rose-100 text-rose-700" : "bg-orange-100 text-orange-700"; }
+
+export function AdminOrdersTable({ orders }: { orders: Row[] }) {
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(orders.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const visible = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  return <div className="space-y-4"><table className="w-full min-w-[900px] text-left text-sm"><thead className="border-b bg-slate-50 text-xs uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-950"><tr><th className="px-5 py-4">Order</th><th className="px-5 py-4">Customer</th><th className="px-5 py-4">Shop</th><th className="px-5 py-4">Total</th><th className="px-5 py-4">Status</th><th className="px-5 py-4">Update</th><th className="px-5 py-4">Date</th></tr></thead><tbody className="divide-y dark:divide-slate-800">{visible.map((order) => { const status = String(value(order, "status", "payment_status") ?? "pending").toLowerCase(); return <tr key={String(order.id)}><td className="px-5 py-4 font-bold">#{String(order.id).slice(0, 10)}</td><td className="px-5 py-4">{String(value(order, "customer_name", "customer_email", "customer_id") ?? "Unknown")}</td><td className="px-5 py-4">{String(value(order, "shop_name", "shop_id") ?? "Multiple shops")}</td><td className="px-5 py-4 font-bold">{formatCurrency(Number(value(order, "total_amount", "total", "subtotal") ?? 0), String(order.currency ?? "USD"))}</td><td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${badge(status)}`}>{status}</span></td><td className="px-5 py-4"><form action={updateAdminOrderStatus} className="flex items-center gap-2"><input type="hidden" name="orderId" value={String(order.id)} /><select name="status" defaultValue={status} className="field min-h-9 w-32 px-2 py-1 text-xs"><option value="pending">Pending</option>{statuses.filter((item) => item !== "pending").map((item) => <option key={item} value={item}>{item[0].toUpperCase() + item.slice(1)}</option>)}</select><button className="button-primary min-h-9 bg-orange-500 px-3 py-1.5 text-xs hover:bg-orange-600">Save</button></form></td><td className="px-5 py-4 text-slate-500">{String(order.created_at ?? "-")}</td></tr>; })}</tbody></table>{pageCount > 1 && <nav className="flex items-center justify-center gap-2" aria-label="Order pagination"><button type="button" disabled={currentPage === 1} onClick={() => setPage(Math.max(1, currentPage - 1))} className="icon-button border border-slate-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10" aria-label="Previous page"><ChevronLeft className="size-4" /></button>{Array.from({ length: pageCount }, (_, index) => index + 1).map((number) => <button type="button" key={number} onClick={() => setPage(number)} className={`grid size-9 place-items-center rounded-lg text-xs font-black ${number === currentPage ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "text-slate-500 hover:bg-orange-50 hover:text-orange-600"}`}>{number}</button>)}<button type="button" disabled={currentPage === pageCount} onClick={() => setPage(Math.min(pageCount, currentPage + 1))} className="icon-button border border-slate-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10" aria-label="Next page"><ChevronRight className="size-4" /></button></nav>}</div>;
+}

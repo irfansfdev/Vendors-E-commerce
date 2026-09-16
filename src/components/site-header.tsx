@@ -13,6 +13,7 @@ import {
   ShoppingCart,
   Store,
   Sun,
+  Truck,
   UserRound,
   X,
 } from "lucide-react";
@@ -22,7 +23,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { signoutAction } from "@/app/auth/actions";
 
 type HeaderProps = {
-  user: { email?: string | null; name?: string | null; isAdmin?: boolean; isSeller?: boolean } | null;
+  user: { email?: string | null; name?: string | null; isAdmin?: boolean; isSeller?: boolean; isRider?: boolean } | null;
 };
 
 export function SiteHeader({ user }: HeaderProps) {
@@ -233,6 +234,14 @@ export function SiteHeader({ user }: HeaderProps) {
               >
                 <ShieldCheck className="size-4" /> Admin panel
               </Link>
+            ) : user?.isRider ? (
+              <Link
+                href="/rider"
+                className="ml-auto flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-extrabold text-orange-700 shadow-sm transition hover:bg-orange-100 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300"
+                title="Open delivery desk"
+              >
+                <Truck className="size-4" /> Delivery desk
+              </Link>
             ) : user?.isSeller ? (
               <Link
                 href="/seller"
@@ -291,6 +300,11 @@ export function SiteHeader({ user }: HeaderProps) {
                 {user.isSeller && !user.isAdmin && (
                   <Link href="/seller" className="mt-4 flex items-center gap-2 rounded-xl bg-orange-500 px-3 py-2.5 text-xs font-extrabold text-white hover:bg-orange-600" onClick={() => setMenuOpen(false)}>
                     <Store className="size-4" /> Open seller dashboard
+                  </Link>
+                )}
+                {user.isRider && !user.isAdmin && (
+                  <Link href="/rider" className="mt-4 flex items-center gap-2 rounded-xl bg-orange-500 px-3 py-2.5 text-xs font-extrabold text-white hover:bg-orange-600" onClick={() => setMenuOpen(false)}>
+                    <Truck className="size-4" /> Open delivery desk
                   </Link>
                 )}
                 <Link
