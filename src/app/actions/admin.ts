@@ -47,9 +47,17 @@ export async function updateAdminProductStatusAction(productId: string, status: 
   try {
     if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
     const supabase = await createClient();
+    const { data: product } = await supabase.from("products").select("slug").eq("id", productId).maybeSingle();
     const { error } = await supabase.from("products").update({ status, is_active: status === "published" }).eq("id", productId);
     if (error) return { success: false, error: error.message };
-    revalidatePath("/admin/products"); revalidatePath("/admin/shops");
+
+    revalidatePath("/");
+    revalidatePath("/search");
+    revalidatePath("/admin/products");
+    revalidatePath("/admin/shops");
+    if (product?.slug) {
+      revalidatePath(`/product/${product.slug}`);
+    }
     return { success: true };
   } catch (error) { return { success: false, error: error instanceof Error ? error.message : "Could not update product status." }; }
 }

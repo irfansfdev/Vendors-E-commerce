@@ -55,17 +55,17 @@ export default async function RiderProfilePage({
               required
             />
             <label className="grid gap-1.5 text-sm font-bold text-slate-700 dark:text-slate-200">
-  <span>Email</span>
+              <span>Email</span>
 
-  <div className="relative">
-    <input
-      value={String(rider.email ?? "")}
-      readOnly
-      disabled
-      className="field bg-slate-50 text-slate-500 dark:bg-white/5"
-    />
-  </div>
-</label>
+              <div className="relative">
+                <input
+                  value={String(rider.email ?? "")}
+                  readOnly
+                  disabled
+                  className="field bg-slate-50 text-slate-500 dark:bg-white/5"
+                />
+              </div>
+            </label>
             <Field
               label="Phone"
               name="phone"

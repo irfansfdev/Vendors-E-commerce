@@ -1,16 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { BadgeDollarSign, Box, LayoutDashboard, Settings, ShoppingBag } from "lucide-react";
+import { Settings } from "lucide-react";
+import { ActiveNavLink } from "@/components/active-nav-link";
 
 const items = [
-  { label: "Overview", href: "/seller", icon: LayoutDashboard },
-  { label: "Products", href: "/seller/products", icon: Box },
-  { label: "Orders", href: "/seller/orders", icon: ShoppingBag },
-  { label: "Payouts", href: "/seller/payouts", icon: BadgeDollarSign },
-  { label: "Settings", href: "/seller/settings", icon: Settings },
+  { label: "Overview", href: "/seller", icon: "dashboard" as const },
+  { label: "Products", href: "/seller/products", icon: "sellerProducts" as const },
+  { label: "Orders", href: "/seller/orders", icon: "sellerOrders" as const },
+  { label: "Payouts", href: "/seller/payouts", icon: "sellerPayouts" as const },
+  { label: "Settings", href: "/seller/settings", icon: "settings" as const },
 ];
 
 export function SellerSidebar() {
-  return <aside className="surface sticky top-36 hidden h-fit p-2 lg:block"><nav className="grid gap-1 text-sm font-bold">{items.map(({ label, href, icon: Icon }) => <Link key={href} href={href} className="flex items-center gap-3 rounded-xl px-3 py-3 text-slate-500 transition hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-500/10 dark:hover:text-orange-300"><Icon className="size-4" />{label}</Link>)}</nav></aside>;
+  return <><aside className="surface sticky top-36 hidden h-fit p-2 lg:block"><nav className="grid gap-1">{items.map(({ label, href, icon: Icon }) => <ActiveNavLink key={href} href={href} label={label} icon={Icon} exact={href === "/seller"} />)}</nav></aside><nav className="surface flex gap-2 overflow-x-auto p-2 lg:hidden">{items.map(({ label, href, icon: Icon }) => <ActiveNavLink key={href} href={href} label={label} icon={Icon} exact={href === "/seller"} compact />)}</nav></>;
 }

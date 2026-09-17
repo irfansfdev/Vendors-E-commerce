@@ -222,19 +222,21 @@ export const getStorefrontData = cache(async (): Promise<StorefrontData> => {
     const supabase = await createClient();
     let [categoryResult, shopResult, productResult] = await Promise.all([
       supabase.from("categories").select("*"),
-      supabase.from("shops").select("*"),
+      supabase.from("shops").select("*").eq("status", "active"),
       supabase
         .from("products")
-        .select("*, shops(*), product_variants(*), product_images(*), product_categories(categories(*))"),
+        .select("*, shops(*), product_variants(*), product_images(*), product_categories(categories(*))")
+        .eq("status", "published"),
     ]);
 
     if (productResult.error) {
       productResult = await supabase
         .from("products")
-        .select("*, shops(*), product_variants(*), product_images(*)");
+        .select("*, shops(*), product_variants(*), product_images(*)")
+        .eq("status", "published");
     }
     if (productResult.error) {
-      productResult = await supabase.from("products").select("*");
+      productResult = await supabase.from("products").select("*").eq("status", "published");
     }
 
     if (categoryResult.error || shopResult.error || !productResult.data) {
@@ -294,10 +296,11 @@ export async function getProductBySlug(slug: string) {
   const supabase = await createClient();
   let [categoryResult, shopResult, productResult] = await Promise.all([
     supabase.from("categories").select("*"),
-    supabase.from("shops").select("*"),
+    supabase.from("shops").select("*").eq("status", "active"),
     supabase
       .from("products")
       .select("*, shops(*), product_variants(*), product_images(*), product_categories(categories(*))")
+      .eq("status", "published")
       .eq("slug", slug)
       .limit(1)
       .maybeSingle(),
@@ -307,6 +310,7 @@ export async function getProductBySlug(slug: string) {
     productResult = await supabase
       .from("products")
       .select("*, shops(*), product_variants(*), product_images(*)")
+      .eq("status", "published")
       .eq("slug", slug)
       .limit(1)
       .maybeSingle();
@@ -316,8 +320,7 @@ export async function getProductBySlug(slug: string) {
     productResult = await supabase
       .from("products")
       .select("*")
-      .eq("slug", slug)
-      .limit(1)
+      .eq("status", "published")
       .maybeSingle();
   }
 
@@ -379,14 +382,16 @@ export async function getShopBySlug(slug: string) {
     supabase
       .from("products")
       .select("*, product_variants(*), product_images(*)")
-      .eq("shop_id", rawShop.id),
+      .eq("shop_id", rawShop.id)
+      .eq("status", "published"),
   ]);
 
   if (productResult.error || !productResult.data) {
     productResult = await supabase
       .from("products")
       .select("*")
-      .eq("shop_id", rawShop.id);
+      .eq("shop_id", rawShop.id)
+      .eq("status", "published");
   }
 
   const rawProducts = (productResult.data ?? []) as Record<string, unknown>[];

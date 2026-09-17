@@ -1,14 +1,53 @@
 import type { Metadata } from "next";
-import { moderateReviewAction } from "@/app/actions/reviews";
+import { AdminReviewsTable } from "@/components/admin-reviews-table";
 import { createClient } from "@/lib/supabase/server";
-import { Star } from "lucide-react";
 
 export const metadata: Metadata = { title: "Reviews | BabulShop" };
 export const dynamic = "force-dynamic";
 
+type Row = Record<string, unknown>;
+
+function text(row: Row | null | undefined, ...keys: string[]) {
+  const value = keys.map((key) => row?.[key]).find((item) => item !== undefined && item !== null && item !== "");
+  return value ? String(value) : "";
+}
+
 export default async function AdminReviewsPage() {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("product_reviews").select("*, products(title)").order("created_at", { ascending: false });
-  const reviews = (data ?? []) as Record<string, unknown>[];
-  return <div className="p-8"><div className="mb-8"><p className="text-[11px] font-black uppercase tracking-[.18em] text-orange-500">Trust and safety</p><h1 className="mt-2 text-3xl font-black">Reviews</h1><p className="mt-1 text-slate-500">Approve customer feedback before it appears on product pages.</p></div><section className="space-y-4">{error ? <p className="surface p-6 text-sm text-rose-600">Could not load reviews: {error.message}</p> : reviews.length === 0 ? <p className="surface p-12 text-center text-slate-500">No reviews yet.</p> : reviews.map((review) => { const product = review.products as Record<string, unknown> | null; const status = String(review.status); return <article key={String(review.id)} className="surface p-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-wider text-orange-500">{String(product?.title ?? review.product_id)}</p><div className="mt-2 flex text-amber-400">{[1,2,3,4,5].map((star) => <Star key={star} className={`size-4 ${star <= Number(review.rating) ? "fill-current" : ""}`} />)}</div></div><span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${status === "approved" ? "bg-emerald-100 text-emerald-700" : status === "rejected" ? "bg-rose-100 text-rose-700" : "bg-orange-100 text-orange-700"}`}>{status}</span></div><p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">{String(review.review)}</p>{status === "pending" && <div className="mt-5 flex gap-2"><form action={moderateReviewAction}><input type="hidden" name="id" value={String(review.id)} /><input type="hidden" name="status" value="approved" /><button className="button-primary bg-emerald-600 hover:bg-emerald-700">Approve</button></form><form action={moderateReviewAction}><input type="hidden" name="id" value={String(review.id)} /><input type="hidden" name="status" value="rejected" /><button className="button-secondary text-rose-600">Reject</button></form></div>}</article>; })}</section></div>;
+  const { data, error } = await supabase.from("product_reviews").select("*").order("created_at", { ascending: false });
+  const rows = (data ?? []) as Row[];
+  const productIds = rows.map((review) => String(review.product_id ?? "")).filter(Boolean);
+  const userIds = rows.map((review) => String(review.user_id ?? "")).filter(Boolean);
+  const [{ data: products }, { data: profiles }, { data: authNames }] = await Promise.all([
+    productIds.length ? supabase.from("products").select("id, title").in("id", [...new Set(productIds)]) : Promise.resolve({ data: [] }),
+    userIds.length ? supabase.from("profiles").select("id, full_name, name, display_name").in("id", [...new Set(userIds)]) : Promise.resolve({ data: [] }),
+    userIds.length ? supabase.rpc("get_admin_user_display_names", { target_user_ids: [...new Set(userIds)] }) : Promise.resolve({ data: [] }),
+  ]);
+  const productMap = new Map((products ?? []).map((product) => [String(product.id), product as Row]));
+  const profileMap = new Map((profiles ?? []).map((profile) => [String(profile.id), profile as Row]));
+  const authMap = new Map<string, string>((authNames ?? []).map((row: Row) => [String(row.user_id), String(row.display_name ?? "")] as [string, string]));
+  const reviews = rows.map((review) => {
+    const userId = String(review.user_id ?? "");
+    const profile = profileMap.get(userId);
+    return {
+      id: String(review.id),
+      product: text(productMap.get(String(review.product_id)), "title") || "Product",
+      customer: text(profile, "full_name", "name", "display_name") || authMap.get(userId) || String(review.customer_name ?? review.customer_email ?? "Customer"),
+      rating: Number(review.rating ?? 0),
+      review: String(review.review ?? ""),
+      status: String(review.status ?? "pending").toLowerCase(),
+      createdAt: String(review.created_at ?? ""),
+    };
+  });
+
+  return (
+    <div className="mx-auto max-w-[1440px] p-5 sm:p-8 lg:p-10">
+      <header className="mb-8">
+        <p className="text-[11px] font-black uppercase tracking-[.18em] text-orange-500">Trust and safety</p>
+        <h1 className="page-title mt-2">Reviews</h1>
+        <p className="mt-2 text-sm text-slate-500">Review customer feedback before it appears on product pages.</p>
+      </header>
+      {error ? <section className="surface p-6 text-sm text-rose-600">Could not load reviews: {error.message}</section> : <AdminReviewsTable reviews={reviews} />}
+    </div>
+  );
 }

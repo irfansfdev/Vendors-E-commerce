@@ -1,10 +1,17 @@
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import "./globals.css";
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: { default: "BabulShop — Shop independent, live inspired", template: "%s | BabulShop" },
@@ -38,7 +45,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body>
+      <body className={plusJakartaSans.variable}>
         <Providers>
           <SiteHeader
             user={user ? { email: user.email, name: String(user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? ""), isAdmin: user.app_metadata?.is_admin === true, isSeller, isRider } : null}

@@ -22,7 +22,8 @@ type CategoryItem = {
   name: string;
   slug: string;
   image_url?: string | null;
-  productCount?: number;
+  productCount: number;
+  createdAt?: string;
 };
 
 export function CategoryManager({
@@ -49,12 +50,15 @@ export function CategoryManager({
             c.banner_url ||
             ""
         ) || null,
-      productCount: typeof c.productCount === "number" ? c.productCount : undefined,
+      productCount: typeof c.productCount === "number" ? c.productCount : 0,
+      createdAt: String(c.created_at ?? c.createdAt ?? ""),
     })),
   );
 
   // Sync state if initialCategories prop updates from server revalidation
   useEffect(() => {
+    // Server revalidation can replace the category list after create/edit/delete.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCategories(
       initialCategories.map((c) => ({
         id: String(c.id),
@@ -71,7 +75,8 @@ export function CategoryManager({
               c.banner_url ||
               ""
           ) || null,
-        productCount: typeof c.productCount === "number" ? c.productCount : undefined,
+        productCount: typeof c.productCount === "number" ? c.productCount : 0,
+        createdAt: String(c.created_at ?? c.createdAt ?? ""),
       })),
     );
   }, [initialCategories]);
@@ -100,6 +105,7 @@ export function CategoryManager({
 
   // Deleting category state
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"all" | "new">("all");
 
   function handleAddNameChange(value: string) {
     setAddName(value);
@@ -194,6 +200,7 @@ export function CategoryManager({
           slug: addSlug.trim(),
           image_url: createdImage,
           productCount: 0,
+          createdAt: new Date().toISOString(),
         };
         setCategories((prev) => [newCat, ...prev]);
         setAddName("");
@@ -284,8 +291,27 @@ export function CategoryManager({
 
   return (
     <div className="space-y-8">
-      {/* 1. Add Category Form Card */}
-      <section className="surface p-6 sm:p-7">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("all")}
+            className={`rounded-xl px-3.5 py-2 text-xs font-black transition ${activeTab === "all" ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "bg-white text-slate-500 ring-1 ring-slate-200 hover:text-orange-500 dark:bg-white/5 dark:ring-white/10"}`}
+          >
+            Categories <span className="ml-1 opacity-60">{categories.length}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("new")}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black transition ${activeTab === "new" ? "bg-orange-500 text-white" : "bg-white text-slate-500 ring-1 ring-slate-200 hover:text-orange-500 dark:bg-white/5 dark:ring-white/10"}`}
+          >
+            <Plus className="size-3.5" /> New category
+          </button>
+        </div>
+      </div>
+
+      {/* Add Category Form Card */}
+      {activeTab === "new" && <section className="surface p-6 sm:p-7">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-white/10">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-black tracking-tight">
@@ -452,13 +478,13 @@ export function CategoryManager({
             </button>
           </div>
         </form>
-      </section>
+      </section>}
 
-      {/* 2. Existing Categories List with Rich Editing */}
-      <section className="overflow-hidden rounded-2xl border bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      {/* Existing Categories Directory */}
+      {activeTab === "all" && <section className="surface overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-100 p-5 dark:border-slate-800">
           <div>
-            <h2 className="font-extrabold text-base">Current Categories</h2>
+            <h2 className="font-semibold text-base">Category directory</h2>
             <p className="mt-0.5 text-xs text-slate-400">
               {categories.length} categories available in marketplace
             </p>
@@ -470,7 +496,16 @@ export function CategoryManager({
         ) : categories.length === 0 ? (
           <p className="p-12 text-center text-slate-500">No categories found.</p>
         ) : (
-          <div className="divide-y dark:divide-slate-800">
+          <div className="overflow-x-auto">
+            <div className="grid min-w-[1120px] grid-cols-[minmax(300px,1.35fr)_minmax(200px,1fr)_100px_125px_110px_230px] gap-4 border-b border-slate-100 bg-slate-50/70 px-5 py-4 text-[10px] font-black uppercase tracking-[.12em] text-slate-400 dark:border-white/10 dark:bg-white/5">
+              <span>Category</span>
+              <span>Slug</span>
+              <span>Products</span>
+              <span>Created</span>
+              <span>Image</span>
+              <span className="text-right">Actions</span>
+            </div>
+            <div className="min-w-[1120px] divide-y divide-slate-100 dark:divide-white/10">
             {categories.map((category) => {
               const isEditing = editingId === category.id;
               const displayImage =
@@ -478,12 +513,12 @@ export function CategoryManager({
                 "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=400&q=80";
 
               return (
-                <div key={category.id} className="p-5 transition hover:bg-slate-50/50 dark:hover:bg-white/[.015]">
+                <div key={category.id} className="grid gap-4 p-5 transition hover:bg-orange-50/40 dark:hover:bg-white/5 lg:grid-cols-[minmax(300px,1.35fr)_minmax(200px,1fr)_100px_125px_110px_230px] lg:items-center">
                   {isEditing ? (
                     /* Edit Mode Form */
                     <form
                       onSubmit={(e) => handleSaveEdit(category.id, e)}
-                      className="rounded-2xl border border-orange-200 bg-orange-50/30 p-5 dark:border-orange-500/20 dark:bg-orange-500/5 space-y-4"
+                      className="space-y-4 rounded-2xl border border-orange-200 bg-orange-50/30 p-5 dark:border-orange-500/20 dark:bg-orange-500/5 lg:col-span-6"
                     >
                       <div className="flex items-center justify-between border-b border-orange-200 pb-3 dark:border-orange-500/20">
                         <p className="text-xs font-black uppercase tracking-wider text-orange-600 dark:text-orange-400">
@@ -624,7 +659,7 @@ export function CategoryManager({
                     </form>
                   ) : (
                     /* Normal View Mode */
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <>
                       <div className="flex items-center gap-4">
                         <div className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-white/10 dark:bg-white/5">
                           <Image
@@ -640,18 +675,13 @@ export function CategoryManager({
                           <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
                             {category.name}
                           </h3>
-                          <p className="mt-0.5 font-mono text-xs text-slate-500 dark:text-slate-400">
-                            /{category.slug}
-                          </p>
-                          {category.image_url && (
-                            <p className="mt-0.5 line-clamp-1 max-w-md text-[11px] text-slate-400">
-                              {category.image_url}
-                            </p>
-                          )}
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2">
+                      <p className="font-mono text-xs text-slate-500 dark:text-slate-400">/{category.slug}</p>
+                      <p className="text-sm font-semibold">{category.productCount}</p>
+                      <p className="text-xs text-slate-500">{category.createdAt ? new Date(category.createdAt).toLocaleDateString() : "-"}</p>
+                      <span className="text-xs text-slate-400">{category.image_url ? "Image added" : "No image"}</span>
+                      <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => startEditing(category)}
                           className="button-secondary text-xs"
@@ -671,14 +701,15 @@ export function CategoryManager({
                           Delete
                         </button>
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               );
             })}
+            </div>
           </div>
         )}
-      </section>
+      </section>}
     </div>
   );
 }
