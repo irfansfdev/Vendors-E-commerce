@@ -167,7 +167,7 @@ export async function updateProductAction(productId: string, formData: FormData)
   const price = Number(formData.get("price"));
   const compareAtPriceValue = String(formData.get("compare_at_price") ?? "").trim();
   const categoryId = String(formData.get("category_id") ?? "").trim();
-  const status = String(formData.get("status") ?? "published");
+  const requestedStatus = String(formData.get("status") ?? "published");
   let variants: Array<{ id?: string; sku: string; price: number; compare_at_price?: number | null; stock: number; attributes: Record<string, string> }> = [];
   try { variants = JSON.parse(String(formData.get("variants_json") ?? "[]")); } catch { return { success: false, error: "Invalid variant data." }; }
   if (title.length < 2 || !description || !Number.isFinite(price) || price < 0) {
@@ -176,6 +176,9 @@ export async function updateProductAction(productId: string, formData: FormData)
   const supabase = await createClient();
   const { data: shop } = await supabase.from("shops").select("id").eq("owner_id", user.id).eq("status", "active").limit(1).maybeSingle();
   if (!shop?.id) return { success: false, error: "Seller shop not found." };
+  const { data: currentProduct } = await supabase.from("products").select("status").eq("id", productId).eq("shop_id", shop.id).maybeSingle();
+  const currentStatus = String(currentProduct?.status ?? "published").toLowerCase();
+  const status = currentStatus === "pending" ? "pending" : ["published", "draft", "archived"].includes(requestedStatus) ? requestedStatus : "published";
   const { error } = await supabase.from("products").update({ title, description, price, compare_at_price: compareAtPriceValue ? Number(compareAtPriceValue) : null, category_id: categoryId || null, status }).eq("id", productId).eq("shop_id", shop.id);
   if (error) return { success: false, error: error.message };
   await supabase.from("product_variants").delete().eq("product_id", productId);

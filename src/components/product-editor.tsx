@@ -356,8 +356,8 @@ export function ProductEditor({ shopId, categories = [] }: { shopId: string; cat
       return;
     }
 
-    toast.success("Product published successfully!", {
-      description: `"${productName}" is now live on the marketplace.`,
+    toast.success("Product submitted for approval", {
+      description: `"${productName}" has been sent to the admin for review. It will go live after approval.`,
     });
 
     router.push("/seller");

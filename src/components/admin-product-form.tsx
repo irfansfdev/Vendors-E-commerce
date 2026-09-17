@@ -117,10 +117,12 @@ export function ProductForm(props: ProductFormProps) {
       const duplicate = skuValues.length ? await supabase.from("product_variants").select("sku,product_id").in("sku", skuValues) : { data: [], error: null };
       if (duplicate.error) throw duplicate.error;
       if (((duplicate.data ?? []) as VariantSkuRow[]).some((row) => String(row.product_id) !== String(productId ?? ""))) throw new Error("A variant SKU is already in use.");
-      const productPayload = { id, shop_id: shopId, title: name.trim(), slug: slug.trim(), brand: null, sku: sku.trim() || null, price: Number(price), compare_at_price: compareAtPrice.trim() ? Number(compareAtPrice) : null, description: description.trim(), is_active: isActive, is_featured: isFeatured, status: isActive ? "published" : "draft" };
+      const existingStatus = String(props.product?.status ?? "draft").toLowerCase();
+      const status = existingStatus === "pending" ? "pending" : isActive ? "published" : "draft";
+      const productPayload = { id, shop_id: shopId, title: name.trim(), slug: slug.trim(), brand: null, sku: sku.trim() || null, price: Number(price), compare_at_price: compareAtPrice.trim() ? Number(compareAtPrice) : null, description: description.trim(), is_active: isActive, is_featured: isFeatured, status };
       let productResult = productId ? await supabase.from("products").update(productPayload).eq("id", id) : await supabase.from("products").insert(productPayload);
       if (productResult.error && /brand|is_active|is_featured/i.test(productResult.error.message)) {
-        const legacyPayload = { id, shop_id: shopId, title: name.trim(), slug: slug.trim(), sku: sku.trim() || null, price: Number(price), compare_at_price: compareAtPrice.trim() ? Number(compareAtPrice) : null, description: description.trim(), status: isActive ? "published" : "draft" };
+        const legacyPayload = { id, shop_id: shopId, title: name.trim(), slug: slug.trim(), sku: sku.trim() || null, price: Number(price), compare_at_price: compareAtPrice.trim() ? Number(compareAtPrice) : null, description: description.trim(), status };
         productResult = productId ? await supabase.from("products").update(legacyPayload).eq("id", id) : await supabase.from("products").insert(legacyPayload);
       }
       if (productResult.error) throw productResult.error;
@@ -134,7 +136,10 @@ export function ProductForm(props: ProductFormProps) {
       const imageDelete = await supabase.from("product_images").delete().eq("product_id", id); if (imageDelete.error) throw imageDelete.error;
       if (images.length) { let imageInsert = await supabase.from("product_images").insert(images.map((image, index) => ({ id: crypto.randomUUID(), product_id: id, image_url: image.url, alt: image.alt || name, is_primary: image.is_primary, display_order: index + 1 }))); if (imageInsert.error && /alt|is_primary/i.test(imageInsert.error.message)) imageInsert = await supabase.from("product_images").insert(images.map((image, index) => ({ id: crypto.randomUUID(), product_id: id, image_url: image.url, display_order: index + 1 }))); if (imageInsert.error) throw imageInsert.error; }
       toast.success("Product saved successfully.", { id: toastId }); router.push("/admin/products"); router.refresh();
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not save product.", { id: toastId }); }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : typeof error === "object" && error !== null && "message" in error ? String((error as { message: unknown }).message) : "Could not save product.";
+      toast.error(message, { id: toastId });
+    }
     finally { setSaving(false); }
   }
 

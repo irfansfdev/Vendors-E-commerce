@@ -20,7 +20,7 @@ export default async function AdminOrdersPage() {
   const addressIds = orders.map((order) => String(order.shipping_address_id ?? "")).filter(Boolean);
   const [{ data: profiles }, { data: shops }, { data: addresses }, { data: authNames }] = await Promise.all([
     customerIds.length
-    ? await supabase.from("profiles").select("id, full_name, name, display_name").in("id", customerIds)
+    ? await supabase.from("profiles").select("id, full_name, name, display_name, username, first_name, last_name").in("id", customerIds)
     : Promise.resolve({ data: [] }),
     shopIds.length ? supabase.from("shops").select("id, name").in("id", [...new Set(shopIds)]) : Promise.resolve({ data: [] }),
     addressIds.length ? supabase.from("addresses").select("id, full_name, name").in("id", [...new Set(addressIds)]) : Promise.resolve({ data: [] }),
@@ -34,7 +34,8 @@ export default async function AdminOrdersPage() {
   for (const order of orders) {
     const profile = profileById.get(String(order.customer_id ?? order.user_id));
     const address = addressById.get(String(order.shipping_address_id ?? ""));
-    const name = value(address ?? {}, "full_name", "name") ?? value(order, "customer_name", "full_name") ?? (profile && value(profile, "full_name", "name", "display_name")) ?? authNameById.get(String(order.customer_id ?? order.user_id));
+    const profileName = profile && (value(profile, "full_name", "name", "display_name", "username") ?? [profile.first_name, profile.last_name].filter(Boolean).join(" "));
+    const name = value(address ?? {}, "full_name", "name") ?? value(order, "customer_name", "full_name") ?? profileName ?? authNameById.get(String(order.customer_id ?? order.user_id));
     if (name && !value(order, "customer_name")) order.customer_name = name;
     if (Array.isArray(order.shop_orders)) {
       order.shop_orders = (order.shop_orders as Row[]).map((shopOrder) => ({

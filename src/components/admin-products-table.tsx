@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Archive, Check, ChevronLeft, ChevronRight, Edit3, Eye, Search, Store, X } from "lucide-react";
+import { ActionMenu } from "@/components/action-menu";
 import { toast } from "sonner";
 import { updateAdminProductStatusAction } from "@/app/actions/admin";
 
@@ -20,8 +21,8 @@ type Product = {
 type Tab = "all" | "pending" | "published" | "draft" | "archived";
 const pageSize = 8;
 
-export function AdminProductsTable({ products }: { products: Product[] }) {
-  const [tab, setTab] = useState<Tab>("all");
+export function AdminProductsTable({ products, initialTab = "all" }: { products: Product[]; initialTab?: Tab }) {
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [busy, setBusy] = useState<string | null>(null);
@@ -227,45 +228,7 @@ export function AdminProductsTable({ products }: { products: Product[] }) {
 }
 
 function Actions({ product, busy, onStatus }: { product: Product; busy: boolean; onStatus: (product: Product, status: "published" | "draft" | "archived") => void }) {
-  return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
-      {product.status === "pending" && (
-        <>
-          <button type="button" disabled={busy} onClick={() => onStatus(product, "published")} className="button-primary bg-emerald-600 px-3 py-2 text-xs">
-            <Check className="size-3.5" /> Approve
-          </button>
-          <button type="button" disabled={busy} onClick={() => onStatus(product, "archived")} className="button-secondary px-3 py-2 text-xs">
-            <X className="size-3.5" /> Reject
-          </button>
-        </>
-      )}
-
-      {product.status === "draft" && (
-        <button type="button" disabled={busy} onClick={() => onStatus(product, "published")} className="button-primary bg-emerald-600 px-3 py-2 text-xs">
-          <Check className="size-3.5" /> Publish
-        </button>
-      )}
-
-      {product.status === "published" && (
-        <button type="button" disabled={busy} onClick={() => onStatus(product, "archived")} className="button-secondary px-3 py-2 text-xs">
-          <Archive className="size-3.5" /> Archive
-        </button>
-      )}
-
-      {product.status === "archived" && (
-        <button type="button" disabled={busy} onClick={() => onStatus(product, "draft")} className="button-secondary px-3 py-2 text-xs">
-          Restore draft
-        </button>
-      )}
-
-      <Link href={`/admin/products/${product.id}/edit`} className="button-secondary px-3 py-2 text-xs">
-        <Edit3 className="size-3.5" /> Edit
-      </Link>
-      <Link href={`/product/${product.slug}`} className="button-secondary px-3 py-2 text-xs">
-        <Eye className="size-3.5" /> View
-      </Link>
-    </div>
-  );
+  return <ActionMenu label="Product actions" disabled={busy}><Link href={`/admin/products/${product.id}/edit`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50 dark:hover:bg-white/5"><Edit3 className="size-3.5" /> Edit product</Link><Link href={`/product/${product.slug}`} target="_blank" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50 dark:hover:bg-white/5"><Eye className="size-3.5" /> View product</Link>{product.status === "pending" && <><button type="button" disabled={busy} onClick={() => onStatus(product, "published")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><Check className="size-3.5" /> Approve product</button><button type="button" disabled={busy} onClick={() => onStatus(product, "archived")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50"><X className="size-3.5" /> Reject product</button></>}{product.status === "draft" && <button type="button" disabled={busy} onClick={() => onStatus(product, "published")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><Check className="size-3.5" /> Publish product</button>}{product.status === "published" && <button type="button" disabled={busy} onClick={() => onStatus(product, "archived")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50"><Archive className="size-3.5" /> Archive product</button>}{product.status === "archived" && <button type="button" disabled={busy} onClick={() => onStatus(product, "draft")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50"><Archive className="size-3.5" /> Restore draft</button>}</ActionMenu>;
 }
 
 function ShopIdentity({ name }: { name: string }) {

@@ -8,7 +8,8 @@ export const metadata: Metadata = { title: "Products | BabulShop Admin" };
 export const dynamic = "force-dynamic";
 type Row = Record<string, any>;
 
-export default async function AdminProductsPage() {
+export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  const params = await searchParams;
   const supabase = await createClient();
   const { data, error } = await supabase.from("products").select("id,title,slug,price,status,created_at,shop_id,shops(id,name,owner_id)").order("created_at", { ascending: false });
   const products = ((data ?? []) as Row[]).map((product) => {
@@ -64,7 +65,7 @@ export default async function AdminProductsPage() {
             Requests submitted by shop admins appear in the Requests tab for approval.
           </p>
         </div>
-        {error ? <p className="p-6 text-sm text-rose-600">Could not load products: {error.message}</p> : <AdminProductsTable products={products} />}
+        {error ? <p className="p-6 text-sm text-rose-600">Could not load products: {error.message}</p> : <AdminProductsTable products={products} initialTab={params.status === "pending" ? "pending" : "all"} />}
       </section>
     </div>
   );

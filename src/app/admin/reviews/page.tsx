@@ -20,7 +20,7 @@ export default async function AdminReviewsPage() {
   const userIds = rows.map((review) => String(review.user_id ?? "")).filter(Boolean);
   const [{ data: products }, { data: profiles }, { data: authNames }] = await Promise.all([
     productIds.length ? supabase.from("products").select("id, title").in("id", [...new Set(productIds)]) : Promise.resolve({ data: [] }),
-    userIds.length ? supabase.from("profiles").select("id, full_name, name, display_name").in("id", [...new Set(userIds)]) : Promise.resolve({ data: [] }),
+    userIds.length ? supabase.from("profiles").select("id, full_name, name, display_name, username, first_name, last_name").in("id", [...new Set(userIds)]) : Promise.resolve({ data: [] }),
     userIds.length ? supabase.rpc("get_admin_user_display_names", { target_user_ids: [...new Set(userIds)] }) : Promise.resolve({ data: [] }),
   ]);
   const productMap = new Map((products ?? []).map((product) => [String(product.id), product as Row]));
@@ -32,7 +32,7 @@ export default async function AdminReviewsPage() {
     return {
       id: String(review.id),
       product: text(productMap.get(String(review.product_id)), "title") || "Product",
-      customer: text(profile, "full_name", "name", "display_name") || authMap.get(userId) || String(review.customer_name ?? review.customer_email ?? "Customer"),
+      customer: text(profile, "full_name", "name", "display_name", "username") || [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || authMap.get(userId) || String(review.customer_name ?? review.customer_email ?? "Customer"),
       rating: Number(review.rating ?? 0),
       review: String(review.review ?? ""),
       status: String(review.status ?? "pending").toLowerCase(),

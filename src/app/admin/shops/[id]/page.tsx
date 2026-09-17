@@ -208,6 +208,16 @@ export default async function AdminShopDetailsPage({
     existing.full_name = identity.display_name;
     profileMap.set(String(identity.user_id), existing);
   }
+  const profileName = (profile: Row | null | undefined) => {
+    if (!profile) return undefined;
+    const direct = [profile.full_name, profile.name, profile.display_name, profile.username]
+      .map((value) => String(value ?? "").trim())
+      .find(Boolean);
+    if (direct) return direct;
+    const first = String(profile.first_name ?? "").trim();
+    const last = String(profile.last_name ?? "").trim();
+    return [first, last].filter(Boolean).join(" ") || undefined;
+  };
   for (const order of orderRows) {
     const parent = parentMap.get(String(order.parent_order_id));
     const address = parent
@@ -220,7 +230,7 @@ export default async function AdminShopDetailsPage({
       address?.name ??
       parent?.customer_name ??
       parent?.full_name ??
-      profileMap.get(String(order.customer_id))?.full_name ??
+      profileName(profileMap.get(String(order.customer_id))) ??
       order.customer_name;
   }
   const customerMap = new Map<string, Row>();
@@ -242,7 +252,7 @@ export default async function AdminShopDetailsPage({
         parent?.customer_name ??
         parent?.full_name ??
         order.customer_name ??
-        profileMap.get(customerId)?.full_name,
+        profileName(profileMap.get(customerId)),
       total_orders: 0,
       total_spent: 0,
       last_order: order.created_at,
@@ -294,7 +304,8 @@ export default async function AdminShopDetailsPage({
   const owner = ownerProfile
     ? {
         ...ownerProfile,
-        owner_name: ownerProfile.owner_name ?? (shop as Row).owner_name,
+        full_name: profileName(ownerProfile) ?? (shop as Row).owner_name,
+        owner_name: ownerProfile.owner_name ?? profileName(ownerProfile) ?? (shop as Row).owner_name,
         email: ownerProfile.email ?? (shop as Row).owner_email,
       }
     : {
