@@ -20,6 +20,7 @@ export type PublishProductInput = {
     attributes: Record<string, string>;
   }[];
   images: string[];
+  featuredRequested?: boolean;
 };
 
 export async function publishProductAction(input: PublishProductInput): Promise<{ success: boolean; error?: string; productId?: string }> {
@@ -66,6 +67,9 @@ export async function publishProductAction(input: PublishProductInput): Promise<
       price: input.price,
       compare_at_price: input.compare_at_price,
       status: "pending",
+      is_featured: false,
+      featured_status: input.featuredRequested ? "pending" : "not_requested",
+      featured_requested_at: input.featuredRequested ? new Date().toISOString() : null,
     };
 
     const prodResult = await supabase.from("products").insert(productPayload);
@@ -168,6 +172,7 @@ export async function updateProductAction(productId: string, formData: FormData)
   const compareAtPriceValue = String(formData.get("compare_at_price") ?? "").trim();
   const categoryId = String(formData.get("category_id") ?? "").trim();
   const requestedStatus = String(formData.get("status") ?? "published");
+  const featuredRequested = formData.get("featured_request") === "on";
   let variants: Array<{ id?: string; sku: string; price: number; compare_at_price?: number | null; stock: number; attributes: Record<string, string> }> = [];
   try { variants = JSON.parse(String(formData.get("variants_json") ?? "[]")); } catch { return { success: false, error: "Invalid variant data." }; }
   if (title.length < 2 || !description || !Number.isFinite(price) || price < 0) {
@@ -176,10 +181,11 @@ export async function updateProductAction(productId: string, formData: FormData)
   const supabase = await createClient();
   const { data: shop } = await supabase.from("shops").select("id").eq("owner_id", user.id).eq("status", "active").limit(1).maybeSingle();
   if (!shop?.id) return { success: false, error: "Seller shop not found." };
-  const { data: currentProduct } = await supabase.from("products").select("status").eq("id", productId).eq("shop_id", shop.id).maybeSingle();
+  const { data: currentProduct } = await supabase.from("products").select("status,featured_status").eq("id", productId).eq("shop_id", shop.id).maybeSingle();
   const currentStatus = String(currentProduct?.status ?? "published").toLowerCase();
   const status = currentStatus === "pending" ? "pending" : ["published", "draft", "archived"].includes(requestedStatus) ? requestedStatus : "published";
-  const { error } = await supabase.from("products").update({ title, description, price, compare_at_price: compareAtPriceValue ? Number(compareAtPriceValue) : null, category_id: categoryId || null, status }).eq("id", productId).eq("shop_id", shop.id);
+  const featuredUpdate = featuredRequested && currentProduct?.featured_status !== "approved" ? { featured_status: "pending", featured_requested_at: new Date().toISOString(), is_featured: false } : !featuredRequested && currentProduct?.featured_status === "pending" ? { featured_status: "not_requested", featured_requested_at: null, is_featured: false } : {};
+  const { error } = await supabase.from("products").update({ title, description, price, compare_at_price: compareAtPriceValue ? Number(compareAtPriceValue) : null, category_id: categoryId || null, status, ...featuredUpdate }).eq("id", productId).eq("shop_id", shop.id);
   if (error) return { success: false, error: error.message };
   await supabase.from("product_variants").delete().eq("product_id", productId);
   if (variants.length > 0) {

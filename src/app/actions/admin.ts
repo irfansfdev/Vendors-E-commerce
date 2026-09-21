@@ -48,7 +48,7 @@ export async function updateAdminProductStatusAction(productId: string, status: 
     if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
     const supabase = await createClient();
     const { data: product } = await supabase.from("products").select("slug").eq("id", productId).maybeSingle();
-    const { error } = await supabase.from("products").update({ status, is_active: status === "published" }).eq("id", productId);
+    const { error } = await supabase.from("products").update({ status, is_active: status === "published", ...(status === "published" ? {} : { is_featured: false, featured_status: "rejected" }) }).eq("id", productId);
     if (error) return { success: false, error: error.message };
 
     revalidatePath("/");
@@ -60,6 +60,21 @@ export async function updateAdminProductStatusAction(productId: string, status: 
     }
     return { success: true };
   } catch (error) { return { success: false, error: error instanceof Error ? error.message : "Could not update product status." }; }
+}
+
+export async function updateAdminFeaturedStatusAction(productId: string, status: "approved" | "rejected") {
+  try {
+    if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
+    const supabase = await createClient();
+    const { data: product } = await supabase.from("products").select("slug,status,is_active").eq("id", productId).maybeSingle();
+    if (!product) return { success: false, error: "Product not found." };
+    if (status === "approved" && (product.status !== "published" || product.is_active !== true)) return { success: false, error: "Approve the product first before approving Featured." };
+    const { error } = await supabase.from("products").update({ featured_status: status, is_featured: status === "approved", featured_reviewed_at: new Date().toISOString(), featured_rejection_reason: status === "approved" ? null : "Featured request rejected by admin." }).eq("id", productId);
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/"); revalidatePath("/admin/products"); revalidatePath(`/admin/products/${productId}/edit`);
+    if (product.slug) revalidatePath(`/product/${product.slug}`);
+    return { success: true };
+  } catch (error) { return { success: false, error: error instanceof Error ? error.message : "Could not update Featured status." }; }
 }
 
 async function requireAdmin() {

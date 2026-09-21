@@ -1,0 +1,18 @@
+import { formatCurrency } from "@/lib/utils";
+
+export type DashboardPoint = { label: string; value: number; count?: number };
+export type BreakdownPoint = { label: string; value: number; tone: string };
+
+export function MonthlyChart({ points, title, eyebrow, totalLabel }: { points: DashboardPoint[]; title: string; eyebrow: string; totalLabel: string }) {
+  const max = Math.max(...points.map((point) => point.value), 1);
+  const total = points.reduce((sum, point) => sum + point.value, 0);
+  return <section className="surface p-5 sm:p-6">
+    <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.16em] text-orange-500">{eyebrow}</p><h2 className="mt-1 text-lg font-black">{title}</h2><p className="mt-1 text-xs text-slate-400">Last twelve months · {totalLabel} {formatCurrency(total)}</p></div><span className="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-bold text-orange-600 dark:bg-orange-500/10 dark:text-orange-300">Monthly</span></div>
+    <div className="mt-7 grid grid-cols-[42px_1fr] gap-3"><div className="flex h-48 flex-col justify-between pb-6 text-right text-[9px] font-bold text-slate-400"><span>{formatCurrency(max)}</span><span>{formatCurrency(max / 2)}</span><span>Rs 0</span></div><div className="relative flex h-48 items-end gap-1 border-b border-slate-200 sm:gap-2 dark:border-white/10">{[25, 50, 75].map((line) => <span key={line} className="pointer-events-none absolute inset-x-0 border-t border-dashed border-slate-200/80 dark:border-white/10" style={{ bottom: `${line}%` }} />)}{points.map((point) => <div key={point.label} className="group z-10 flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2"><div className="relative flex h-full w-full items-end"><div className="relative mx-auto w-full max-w-5 rounded-t-md bg-orange-400 transition duration-300 group-hover:bg-orange-500 sm:max-w-7" style={{ height: point.value ? `${Math.max((point.value / max) * 100, 8)}%` : "3px" }} title={`${point.label}: ${formatCurrency(point.value)}`}><span className="pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-950 px-2 py-1 text-[9px] font-bold text-white group-hover:block">{formatCurrency(point.value)}{point.count !== undefined ? ` · ${point.count}` : ""}</span></div></div><span className="truncate text-[9px] font-bold text-slate-400">{point.label}</span></div>)}</div></div>
+  </section>;
+}
+
+export function BreakdownChart({ points, title, eyebrow, valueLabel }: { points: BreakdownPoint[]; title: string; eyebrow: string; valueLabel: string }) {
+  const total = points.reduce((sum, point) => sum + point.value, 0);
+  return <section className="surface p-5 sm:p-6"><p className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-600">{eyebrow}</p><h2 className="mt-1 text-lg font-black">{title}</h2><p className="mt-1 text-xs text-slate-400">{total} total {valueLabel}</p><div className="mt-7 space-y-5">{points.map((point) => <div key={point.label}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs font-bold"><span className="text-slate-500">{point.label}</span><span>{point.value}</span></div><div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10"><div className={`h-full rounded-full ${point.tone}`} style={{ width: `${total ? Math.max((point.value / total) * 100, point.value ? 8 : 0) : 0}%` }} /></div></div>)}</div><div className="mt-7 flex items-center gap-2 border-t border-slate-100 pt-4 text-[10px] font-bold uppercase tracking-[.12em] text-slate-400 dark:border-white/10"><span className="size-2 rounded-full bg-emerald-500" /> Live breakdown</div></section>;
+}

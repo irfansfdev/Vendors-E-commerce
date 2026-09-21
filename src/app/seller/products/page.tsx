@@ -14,15 +14,15 @@ export default async function SellerProductsPage() {
   const products = (data ?? []) as Record<string, unknown>[];
   const productIds = products.map((product) => String(product.id));
   const { data: variants } = productIds.length ? await supabase.from("product_variants").select("product_id,sku,stock_quantity").in("product_id", productIds) : { data: [] };
-  const productInfo = new Map<string, { sku: string; stock: number }>();
+  const productInfo = new Map<string, { stock: number; variantCount: number }>();
   for (const variant of variants ?? []) {
     const id = String(variant.product_id);
-    const current = productInfo.get(id) ?? { sku: "", stock: 0 };
-    current.sku = [current.sku, String(variant.sku ?? "")].filter(Boolean).join(", ");
+    const current = productInfo.get(id) ?? { stock: 0, variantCount: 0 };
+    current.variantCount += 1;
     current.stock += Number(variant.stock_quantity ?? 0);
     productInfo.set(id, current);
   }
-  const rows = products.map((product) => { const info = productInfo.get(String(product.id)); return { id: String(product.id), title: String(product.title ?? "Untitled product"), slug: String(product.slug ?? ""), sku: String(product.sku ?? info?.sku ?? ""), price: Number(product.price ?? 0), stock: info?.stock ?? Number(product.stock_quantity ?? product.stock ?? product.quantity ?? 0), status: String(product.status ?? "draft"), featured: Boolean(product.is_featured), createdAt: String(product.created_at ?? "") }; });
+  const rows = products.map((product) => { const info = productInfo.get(String(product.id)); return { id: String(product.id), title: String(product.title ?? "Untitled product"), slug: String(product.slug ?? ""), variantCount: info?.variantCount ?? 0, price: Number(product.price ?? 0), stock: info?.stock ?? Number(product.stock_quantity ?? product.stock ?? product.quantity ?? 0), status: String(product.status ?? "draft"), featured: Boolean(product.is_featured), createdAt: String(product.created_at ?? "") }; });
   const shopSlug = String(shop.slug ?? "");
 
   return <main className="mx-auto max-w-[1220px] px-4 py-8 sm:px-6 lg:px-8">

@@ -2,6 +2,11 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+form[data-edit-mode="true"] > section:nth-child(1),
+form[data-edit-mode="true"] > section:nth-child(2) {
+  display: none;
+}
+
 @theme {
   --font-sans: "Plus Jakarta Sans", "Inter", "Avenir Next", "Segoe UI", sans-serif;
   --font-serif: Georgia, "Times New Roman", serif;
@@ -17,6 +22,22 @@
   color-scheme: dark;
   --page: #080d18;
   --ink: #f8fafc;
+}
+
+/* Keep shop actions in the profile flow instead of floating over the banner. */
+main.min-h-screen > section:first-child > div {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+main.min-h-screen > section:first-child > div > div:last-child {
+  position: static;
+  align-self: flex-start;
+  margin-top: 1.5rem;
+}
+
+main.min-h-screen > section:first-child > div > div:last-child > button:last-child {
+  display: none;
 }
 
 * {
@@ -208,6 +229,32 @@ button:disabled {
 
 .field::placeholder {
   color: #94a3b8;
+}
+
+/* The storefront search has icons inside the field; reserve their space explicitly. */
+main.min-h-screen input[placeholder^="Search products"] {
+  padding-left: 2.75rem !important;
+  padding-right: 2.75rem !important;
+}
+
+main.min-h-screen input[placeholder^="Search products"]:focus {
+  border-color: #fb923c;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+}
+
+main.min-h-screen #products > div.mt-7 {
+  border-radius: 1rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dark main.min-h-screen #products > div.mt-7 {
+  background: transparent;
+  box-shadow: none;
+}
+
+main.min-h-screen #products > div.mt-7 label.relative {
+  max-width: 34rem;
 }
 
 .surface {

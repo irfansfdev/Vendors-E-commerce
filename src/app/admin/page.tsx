@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowUpRight, BadgeDollarSign, Boxes, Check, CircleDollarSign, ShoppingBag, Store, UsersRound, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils";
+import { BreakdownChart, MonthlyChart, type BreakdownPoint, type DashboardPoint } from "@/components/dashboard-charts";
 import { updateShopStatusAction } from "../actions/admin";
 
 export const metadata: Metadata = { title: "Platform Admin | BabulShop" };
@@ -14,13 +15,13 @@ type DailyPoint = { label: string; amount: number; orders: number };
 function amount(row: Row) { const direct = Number(row.gross_amount ?? row.calculated_total ?? row.total_amount ?? row.subtotal ?? row.total ?? row.amount ?? row.order_total ?? row.grand_total ?? row.total_price ?? 0); if (direct > 0) return direct; return Number(row.seller_earnings ?? 0) + Number(row.platform_commission ?? row.platform_fee ?? 0); }
 function status(row: Row) { return String(row.order_status ?? row.status ?? "pending").toLowerCase(); }
 function isRevenue(row: Row) { return ["paid", "partially_refunded"].includes(String(row.payment_status ?? "").toLowerCase()) || ["delivered", "completed"].includes(status(row)); }
-function dailySales(rows: Row[]): DailyPoint[] {
+function monthlySales(rows: Row[]): DashboardPoint[] {
   const now = new Date();
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(now); date.setHours(0, 0, 0, 0); date.setDate(now.getDate() - (6 - index));
-    const key = date.toLocaleDateString("en-CA");
-    const matching = rows.filter((row) => isRevenue(row) && String(row.paid_at ?? row.delivered_at ?? row.updated_at ?? row.created_at ?? "").slice(0, 10) === key);
-    return { label: date.toLocaleDateString("en-US", { weekday: "short" }), amount: matching.reduce((sum, row) => sum + amount(row), 0), orders: matching.length };
+  return Array.from({ length: 12 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (11 - index), 1);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const matching = rows.filter((row) => isRevenue(row) && String(row.paid_at ?? row.delivered_at ?? row.updated_at ?? row.created_at ?? "").slice(0, 7) === key);
+    return { label: date.toLocaleDateString("en-US", { month: "short" }), value: matching.reduce((sum, row) => sum + amount(row), 0), count: matching.length };
   });
 }
 
@@ -49,7 +50,12 @@ export default async function AdminPage() {
   const pendingPayouts = payouts.filter((row) => String(row.status).toLowerCase() === "pending").reduce((sum, row) => sum + Number(row.net_amount ?? row.amount ?? 0), 0);
   const refunds = revenueRows.reduce((sum, row) => sum + Number(row.refund_amount ?? 0), 0);
   const commission = revenueRows.reduce((sum, row) => sum + Number(row.platform_commission ?? row.platform_fee ?? 0), 0);
-  const points = dailySales(revenueRows);
+  const points = monthlySales(revenueRows);
+  const orderBreakdown: BreakdownPoint[] = [
+    { label: "Delivered", value: delivered.length, tone: "bg-emerald-500" },
+    { label: "Processing", value: revenueRows.filter((row) => ["pending", "processing", "shipped"].includes(status(row))).length, tone: "bg-orange-400" },
+    { label: "Cancelled / refunded", value: revenueRows.filter((row) => ["cancelled", "refunded"].includes(status(row))).length, tone: "bg-rose-400" },
+  ];
   const pendingShops = (pendingResult.data ?? []) as Row[];
   const metrics = [
     { icon: CircleDollarSign, label: "Total sales", value: formatCurrency(sales), detail: `${revenueRows.filter(isRevenue).length} paid or delivered orders`, tone: "text-slate-950 dark:text-white" },
@@ -60,7 +66,7 @@ export default async function AdminPage() {
 
   return <div className="mx-auto max-w-[1440px] px-5 py-7 sm:px-8 lg:px-10"><header className="mb-9 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-[11px] font-black uppercase tracking-[.18em] text-orange-500">BabulShop control room</p><h1 className="page-title mt-2">Platform overview</h1><p className="mt-3 max-w-xl text-sm leading-6 text-slate-500">Keep track of marketplace sales, payouts, shops and customer activity from one place.</p></div><Link href="/admin/shops?status=pending" className="button-primary bg-orange-500 hover:bg-orange-600">Review shop requests <ArrowUpRight className="size-4" /></Link></header>
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(({ icon: Icon, label, value, detail, tone }) => <div key={label} className="surface relative overflow-hidden p-5 sm:p-6"><div className="flex items-start justify-between"><span className="grid size-11 place-items-center rounded-2xl bg-orange-50 text-orange-500 dark:bg-orange-500/10"><Icon className="size-5" /></span><span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-black uppercase tracking-[.12em] text-emerald-600 dark:bg-emerald-500/10">Live</span></div><p className="mt-6 text-xs font-bold text-slate-500">{label}</p><p className={`mt-1 text-2xl font-black tracking-[-.04em] ${tone}`}>{value}</p><p className="mt-1 text-[11px] text-slate-400">{detail}</p></div>)}</section>
-    <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,.8fr)]"><SalesChart points={points} /><aside className="surface p-6"><div className="flex items-start justify-between"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Snapshot</p><h2 className="mt-1 text-xl font-black">Marketplace health</h2></div><span className="grid size-10 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><Store className="size-5" /></span></div><div className="mt-7 space-y-5"><SnapshotRow label="Categories" value={categoriesResult.count ?? 0} icon={Boxes} /><SnapshotRow label="Registered users" value={profilesResult.count ?? 0} icon={UsersRound} /><SnapshotRow label="Pending payouts" value={formatCurrency(pendingPayouts)} icon={BadgeDollarSign} /><SnapshotRow label="Refunds" value={formatCurrency(refunds)} icon={CircleDollarSign} /></div><div className="mt-7 flex items-center gap-2 border-t border-slate-100 pt-5 text-xs font-bold text-emerald-600 dark:border-white/10"><span className="size-2 rounded-full bg-emerald-500" /> Systems operational</div></aside></section>
+    <section className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(260px,.7fr)]"><MonthlyChart points={points} eyebrow="Sales activity" title="Monthly gross volume" totalLabel="total:" /><BreakdownChart points={orderBreakdown} eyebrow="Order mix" title="Order status" valueLabel="orders" /></section>
     <section className="surface mt-6 overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-6 dark:border-white/10"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Needs your attention</p><h2 className="mt-1 text-xl font-black">Pending shop requests</h2></div><Link href="/admin/shops?status=pending" className="text-xs font-bold text-orange-500">View all <ArrowUpRight className="ml-1 inline size-3.5" /></Link></div>{pendingShops.length === 0 ? <p className="p-10 text-center text-sm text-slate-500">No pending shop requests right now.</p> : <div className="divide-y divide-slate-100 dark:divide-white/10">{pendingShops.map((shop) => <div key={String(shop.id)} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-extrabold">{String(shop.name ?? "Unnamed shop")}</h3><p className="mt-1 text-xs text-slate-500">/shop/{String(shop.slug ?? "")} · {shop.created_at ? new Date(String(shop.created_at)).toLocaleDateString() : "Recently requested"}</p></div><div className="flex gap-2"><form action={async () => { "use server"; await updateShopStatusAction(String(shop.id), "active"); }}><button className="button-secondary text-emerald-700"><Check className="size-4" /> Approve</button></form><form action={async () => { "use server"; await updateShopStatusAction(String(shop.id), "rejected"); }}><button className="button-secondary text-rose-700"><X className="size-4" /> Reject</button></form></div></div>)}</div>}</section>
   </div>;
 }

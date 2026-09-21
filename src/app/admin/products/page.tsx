@@ -11,7 +11,7 @@ type Row = Record<string, any>;
 export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const params = await searchParams;
   const supabase = await createClient();
-  const { data, error } = await supabase.from("products").select("id,title,slug,price,status,created_at,shop_id,shops(id,name,owner_id)").order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("products").select("id,title,slug,price,status,is_active,is_featured,featured_status,created_at,shop_id,shops(id,name,owner_id),product_variants(count)").order("created_at", { ascending: false });
   const products = ((data ?? []) as Row[]).map((product) => {
     const shop = Array.isArray(product.shops) ? product.shops[0] : product.shops;
     return {
@@ -23,6 +23,10 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       shop: String(shop?.name ?? "Unknown shop"),
       shopId: String(product.shop_id ?? shop?.id ?? ""),
       createdAt: String(product.created_at ?? ""),
+      variantCount: Number(Array.isArray(product.product_variants) ? product.product_variants[0]?.count ?? 0 : 0),
+      isActive: product.is_active !== false,
+      isFeatured: product.is_featured === true,
+      featuredStatus: String(product.featured_status ?? (product.is_featured ? "approved" : "not_requested")),
     };
   });
 
@@ -30,6 +34,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const published = products.filter((product) => product.status === "published").length;
   const draft = products.filter((product) => product.status === "draft").length;
   const archived = products.filter((product) => product.status === "archived").length;
+  const featuredPending = products.filter((product) => product.featuredStatus === "pending").length;
 
   return (
     <div className="mx-auto max-w-[1440px] p-5 sm:p-8 lg:p-10">
@@ -56,6 +61,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         <Metric icon={Clock3} label="Pending requests" value={pending} detail="Waiting for review" tone="text-orange-600" />
         <Metric icon={Check} label="Published products" value={published} detail="Visible to customers" tone="text-emerald-600" />
         <Metric icon={FileText} label="Draft products" value={draft} detail="Not visible to customers" tone="text-rose-600" />
+        <Metric icon={FileText} label="Featured requests" value={featuredPending} detail="Awaiting Featured review" tone="text-orange-600" />
       </section>
 
       <section className="mt-8">
@@ -65,7 +71,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             Requests submitted by shop admins appear in the Requests tab for approval.
           </p>
         </div>
-        {error ? <p className="p-6 text-sm text-rose-600">Could not load products: {error.message}</p> : <AdminProductsTable products={products} initialTab={params.status === "pending" ? "pending" : "all"} />}
+        {error ? <p className="p-6 text-sm text-rose-600">Could not load products: {error.message}</p> : <AdminProductsTable products={products} initialTab={params.status === "pending" ? "pending" : params.status === "featured" ? "featured" : "all"} />}
       </section>
     </div>
   );

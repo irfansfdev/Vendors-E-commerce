@@ -69,6 +69,7 @@ export function ProductEditor({ shopId, categories = [] }: { shopId: string; cat
   // Updated fields
   const [price, setPrice] = useState("35.00");
   const [compareAtPrice, setCompareAtPrice] = useState("");
+  const [featuredRequested, setFeaturedRequested] = useState(false);
 
   // Gallery
   const [files, setFiles] = useState<File[]>([]);
@@ -348,6 +349,7 @@ export function ProductEditor({ shopId, categories = [] }: { shopId: string; cat
       compare_at_price: compareAtPrice ? parseFloat(compareAtPrice) : null, // ADDED
       variants: parsedVariants,
       images: allImages,
+      featuredRequested,
     });
 
     if (!result.success) {
@@ -385,6 +387,8 @@ export function ProductEditor({ shopId, categories = [] }: { shopId: string; cat
                 placeholder="e.g. Handmade Stoneware Coffee Mug"
               />
             </label>
+
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-800 dark:bg-orange-500/10 dark:text-orange-200"><input type="checkbox" checked={featuredRequested} onChange={(event) => setFeaturedRequested(event.target.checked)} /> Request Featured placement <span className="text-xs font-medium opacity-75">(admin approval required)</span></label>
 
             <div className="grid gap-4 sm:grid-cols-3">
               <label className="block">

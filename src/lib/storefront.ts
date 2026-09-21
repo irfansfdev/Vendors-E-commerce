@@ -72,7 +72,7 @@ function mapShop(raw: Record<string, unknown>): Shop | null {
     description: text(raw.description),
     logoUrl: publicStorageUrl("shop-assets", raw.logo_url ?? raw.logo ?? raw.logo_path) || undefined,
     bannerUrl: publicStorageUrl("shop-assets", raw.banner_url ?? raw.banner ?? raw.banner_path) || undefined,
-    rating: number(raw.rating ?? raw.average_rating, 5),
+    rating: number(raw.rating ?? raw.average_rating, 0),
     productCount: number(raw.product_count ?? raw.products_count),
     verified: bool(raw.verified ?? raw.is_verified, true),
   };
@@ -102,6 +102,9 @@ function extractProductImages(raw: Record<string, unknown>): string[] {
     // Sort if objects have position/display_order
     const sorted = [...rawImages].sort((a, b) => {
       if (a && typeof a === "object" && b && typeof b === "object") {
+        const primaryA = (a as Record<string, unknown>).is_primary === true ? 1 : 0;
+        const primaryB = (b as Record<string, unknown>).is_primary === true ? 1 : 0;
+        if (primaryA !== primaryB) return primaryB - primaryA;
         const orderA = number((a as Record<string, unknown>).display_order ?? (a as Record<string, unknown>).sort_order ?? (a as Record<string, unknown>).position, 0);
         const orderB = number((b as Record<string, unknown>).display_order ?? (b as Record<string, unknown>).sort_order ?? (b as Record<string, unknown>).position, 0);
         return orderA - orderB;
@@ -205,10 +208,10 @@ function mapProduct(
     price: variants.length ? Math.min(...variants.map((item) => item.price)) : price,
     compareAtPrice: number(raw.compare_at_price ?? raw.original_price) || undefined,
     currency: text(raw.currency, "PKR"),
-    rating: number(raw.rating ?? raw.average_rating, 5),
-    reviewsCount: number(raw.reviews_count ?? raw.review_count, 1),
+    rating: number(raw.rating ?? raw.average_rating, 0),
+    reviewsCount: number(raw.reviews_count ?? raw.review_count, 0),
     stock,
-    badge: text(raw.badge) || (bool(raw.is_featured) ? "FEATURED" : undefined),
+    badge: text(raw.badge) || (text(raw.featured_status) === "approved" || (!("featured_status" in raw) && bool(raw.is_featured)) ? "FEATURED" : undefined),
     images,
     category: productCategory,
     categories: embeddedCategories.length ? embeddedCategories : productCategory ? [productCategory] : [],
@@ -226,17 +229,19 @@ export const getStorefrontData = cache(async (): Promise<StorefrontData> => {
       supabase
         .from("products")
         .select("*, shops(*), product_variants(*), product_images(*), product_categories(categories(*))")
-        .eq("status", "published"),
+        .eq("status", "published")
+        .eq("is_active", true),
     ]);
 
     if (productResult.error) {
       productResult = await supabase
         .from("products")
         .select("*, shops(*), product_variants(*), product_images(*)")
-        .eq("status", "published");
+        .eq("status", "published")
+        .eq("is_active", true);
     }
     if (productResult.error) {
-      productResult = await supabase.from("products").select("*").eq("status", "published");
+      productResult = await supabase.from("products").select("*").eq("status", "published").eq("is_active", true);
     }
 
     if (categoryResult.error || shopResult.error || !productResult.data) {
@@ -383,7 +388,8 @@ export async function getShopBySlug(slug: string) {
       .from("products")
       .select("*, product_variants(*), product_images(*)")
       .eq("shop_id", rawShop.id)
-      .eq("status", "published"),
+      .eq("status", "published")
+      .eq("is_active", true),
   ]);
 
   if (productResult.error || !productResult.data) {
@@ -391,7 +397,8 @@ export async function getShopBySlug(slug: string) {
       .from("products")
       .select("*")
       .eq("shop_id", rawShop.id)
-      .eq("status", "published");
+      .eq("status", "published")
+      .eq("is_active", true);
   }
 
   const rawProducts = (productResult.data ?? []) as Record<string, unknown>[];

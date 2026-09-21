@@ -327,7 +327,7 @@ export default async function AdminShopDetailsPage({
         owner: owner ?? null,
         orderItems: (orderItems ?? []) as Row[],
         performance: [...performanceMap.entries()]
-          .slice(-6)
+          .slice(-12)
           .map(([label, values]) => ({ label, ...values })),
       }}
     />

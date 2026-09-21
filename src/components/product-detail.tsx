@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
   Check,
@@ -22,6 +23,7 @@ import type { Product } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 export function ProductDetail({ product }: { product: Product }) {
+  const router = useRouter();
   const { addItem } = useCart();
   const [image, setImage] = useState(product.images[0] ?? "");
   const [imageFailed, setImageFailed] = useState(false);
@@ -34,7 +36,10 @@ export function ProductDetail({ product }: { product: Product }) {
       : {};
   });
   const [quantity, setQuantity] = useState(1);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return (JSON.parse(localStorage.getItem("vendra-wishlist") ?? "[]") as string[]).includes(product.id);
+  });
   const groups = useMemo(
     () =>
       Object.entries(
@@ -229,7 +234,7 @@ export function ProductDetail({ product }: { product: Product }) {
             </span>
           </div>
         )}
-        <div className="mt-8 flex gap-3">
+        <div className="mt-8 flex flex-wrap gap-3">
           <div className="flex h-13 items-center rounded-xl border border-slate-200 dark:border-white/10">
             <button
               type="button"
@@ -266,9 +271,24 @@ export function ProductDetail({ product }: { product: Product }) {
           <button
             type="button"
             onClick={() => {
-              setSaved((value) => !value);
+              addItem(product, hasVariants ? variant : undefined, quantity);
+              router.push("/checkout");
+            }}
+            disabled={stock < 1 || !selectedComplete || (hasVariants && !variant)}
+            className="button-secondary h-13 basis-full justify-center px-4 sm:basis-auto"
+          >
+            Buy now
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const wishlist = new Set(JSON.parse(localStorage.getItem("vendra-wishlist") ?? "[]") as string[]);
+              if (wishlist.has(product.id)) wishlist.delete(product.id); else wishlist.add(product.id);
+              localStorage.setItem("vendra-wishlist", JSON.stringify([...wishlist]));
+              window.dispatchEvent(new Event("vendra-wishlist-updated"));
+              setSaved(wishlist.has(product.id));
               toast.success(
-                saved ? "Removed from wishlist" : "Saved to wishlist",
+                wishlist.has(product.id) ? "Saved to wishlist" : "Removed from wishlist",
               );
             }}
             className={`icon-button h-13 w-13 border border-slate-200 dark:border-white/10 ${saved ? "text-rose-500" : ""}`}

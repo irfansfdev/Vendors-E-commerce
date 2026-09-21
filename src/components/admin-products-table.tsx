@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Archive, Check, ChevronLeft, ChevronRight, Edit3, Eye, Search, Store, X } from "lucide-react";
 import { ActionMenu } from "@/components/action-menu";
 import { toast } from "sonner";
-import { updateAdminProductStatusAction } from "@/app/actions/admin";
+import { updateAdminFeaturedStatusAction, updateAdminProductStatusAction } from "@/app/actions/admin";
 
 type Product = {
   id: string;
@@ -16,9 +16,13 @@ type Product = {
   shop: string;
   shopId: string;
   createdAt: string;
+  variantCount: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  featuredStatus: string;
 };
 
-type Tab = "all" | "pending" | "published" | "draft" | "archived";
+type Tab = "all" | "pending" | "published" | "draft" | "archived" | "featured";
 const pageSize = 8;
 
 export function AdminProductsTable({ products, initialTab = "all" }: { products: Product[]; initialTab?: Tab }) {
@@ -33,13 +37,14 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
     published: products.filter((item) => item.status === "published").length,
     draft: products.filter((item) => item.status === "draft").length,
     archived: products.filter((item) => item.status === "archived").length,
+    featured: products.filter((item) => item.featuredStatus === "pending" || item.featuredStatus === "approved").length,
   };
 
   const filtered = useMemo(
     () =>
       products.filter(
         (item) =>
-          (tab === "all" || item.status === tab) &&
+          (tab === "all" || tab === "featured" ? (tab === "all" || item.featuredStatus === "pending" || item.featuredStatus === "approved") : item.status === tab) &&
           [item.title, item.shop, item.slug].join(" ").toLowerCase().includes(query.trim().toLowerCase()),
       ),
     [products, tab, query],
@@ -77,6 +82,15 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
     toast.error(result.error ?? "Could not update product.");
   }
 
+  async function changeFeatured(product: Product, status: "approved" | "rejected") {
+    if (!window.confirm(`${status === "approved" ? "Approve" : "Reject"} Featured request for ${product.title}?`)) return;
+    setBusy(product.id);
+    const result = await updateAdminFeaturedStatusAction(product.id, status);
+    setBusy(null);
+    if (result.success) { toast.success(status === "approved" ? "Featured product approved" : "Featured request rejected"); window.location.reload(); return; }
+    toast.error(result.error ?? "Could not update Featured status.");
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
@@ -96,6 +110,7 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
               <span className="ml-1 opacity-70">{counts[item]}</span>
             </button>
           ))}
+          <button type="button" onClick={() => selectTab("featured")} className={`rounded-xl px-3.5 py-2 text-xs font-black transition ${tab === "featured" ? "bg-orange-500 text-white" : "bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300"}`}>Featured requests <span className="ml-1 opacity-70">{counts.featured}</span></button>
         </div>
 
         <div className="relative w-full lg:max-w-sm">
@@ -132,6 +147,7 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
               <tr>
                 <th className="px-5 py-4">Shop</th>
                 <th className="px-5 py-4">Product</th>
+                <th className="px-5 py-4">Variants</th>
                 <th className="px-5 py-4">Price</th>
                 <th className="px-5 py-4">Submitted</th>
                 <th className="px-5 py-4">Status</th>
@@ -148,15 +164,17 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
                     <p className="text-sm font-semibold">{product.title}</p>
                     <p className="text-xs text-slate-400">/{product.slug || "slug"}</p>
                   </td>
+                  <td className="px-5 py-4"><span className="inline-flex items-center rounded-full bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-700 dark:bg-orange-500/10 dark:text-orange-300">{product.variantCount} {product.variantCount === 1 ? "variant" : "variants"}</span></td>
                   <td className="px-5 py-4 text-sm font-semibold">Rs {product.price.toLocaleString()}</td>
                   <td className="px-5 py-4 text-sm text-slate-500">
                     {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : "-"}
                   </td>
                   <td className="px-5 py-4">
                     <Status status={product.status} />
+                    <FeaturedStatus status={product.featuredStatus} />
                   </td>
                   <td className="px-5 py-4">
-                    <Actions product={product} busy={busy === product.id} onStatus={changeStatus} />
+                    <Actions product={product} busy={busy === product.id} onStatus={changeStatus} onFeatured={changeFeatured} />
                   </td>
                 </tr>
               ))}
@@ -173,14 +191,15 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
                   <p className="mt-4 font-semibold">{product.title}</p>
                   <p className="text-xs text-slate-400">/{product.slug || "slug"}</p>
                 </div>
-                <Status status={product.status} />
+                <div className="flex flex-col items-end gap-2"><Status status={product.status} /><FeaturedStatus status={product.featuredStatus} /></div>
               </div>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <Metric label="Price" value={`Rs ${product.price.toLocaleString()}`} />
+                <Metric label="Variants" value={product.variantCount} />
                 <Metric label="Submitted" value={product.createdAt ? new Date(product.createdAt).toLocaleDateString() : "-"} />
               </div>
               <div className="mt-5 flex justify-end">
-                <Actions product={product} busy={busy === product.id} onStatus={changeStatus} />
+                <Actions product={product} busy={busy === product.id} onStatus={changeStatus} onFeatured={changeFeatured} />
               </div>
             </div>
           ))}
@@ -227,9 +246,11 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
   );
 }
 
-function Actions({ product, busy, onStatus }: { product: Product; busy: boolean; onStatus: (product: Product, status: "published" | "draft" | "archived") => void }) {
-  return <ActionMenu label="Product actions" disabled={busy}><Link href={`/admin/products/${product.id}/edit`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50 dark:hover:bg-white/5"><Edit3 className="size-3.5" /> Edit product</Link><Link href={`/product/${product.slug}`} target="_blank" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50 dark:hover:bg-white/5"><Eye className="size-3.5" /> View product</Link>{product.status === "pending" && <><button type="button" disabled={busy} onClick={() => onStatus(product, "published")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><Check className="size-3.5" /> Approve product</button><button type="button" disabled={busy} onClick={() => onStatus(product, "archived")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50"><X className="size-3.5" /> Reject product</button></>}{product.status === "draft" && <button type="button" disabled={busy} onClick={() => onStatus(product, "published")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><Check className="size-3.5" /> Publish product</button>}{product.status === "published" && <button type="button" disabled={busy} onClick={() => onStatus(product, "archived")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50"><Archive className="size-3.5" /> Archive product</button>}{product.status === "archived" && <button type="button" disabled={busy} onClick={() => onStatus(product, "draft")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50"><Archive className="size-3.5" /> Restore draft</button>}</ActionMenu>;
+function Actions({ product, busy, onStatus, onFeatured }: { product: Product; busy: boolean; onStatus: (product: Product, status: "published" | "draft" | "archived") => void; onFeatured: (product: Product, status: "approved" | "rejected") => void }) {
+  return <ActionMenu label="Product actions" disabled={busy}><Link href={`/admin/products/${product.id}/edit`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50 dark:hover:bg-white/5"><Edit3 className="size-3.5" /> Edit product</Link><Link href={`/product/${product.slug}`} target="_blank" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50 dark:hover:bg-white/5"><Eye className="size-3.5" /> View product</Link>{product.status === "pending" && <><button type="button" disabled={busy} onClick={() => onStatus(product, "published")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><Check className="size-3.5" /> Approve product</button><button type="button" disabled={busy} onClick={() => onStatus(product, "archived")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50"><X className="size-3.5" /> Reject product</button></>}{product.status === "draft" && <button type="button" disabled={busy} onClick={() => onStatus(product, "published")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><Check className="size-3.5" /> Publish product</button>}{product.status === "published" && <button type="button" disabled={busy} onClick={() => onStatus(product, "archived")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50"><Archive className="size-3.5" /> Archive product</button>}{product.featuredStatus === "pending" && <><button type="button" disabled={busy || product.status !== "published"} onClick={() => onFeatured(product, "approved")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><Check className="size-3.5" /> Approve Featured</button><button type="button" disabled={busy} onClick={() => onFeatured(product, "rejected")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50"><X className="size-3.5" /> Reject Featured</button></>}{product.featuredStatus === "approved" && <button type="button" disabled={busy} onClick={() => onFeatured(product, "rejected")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50"><X className="size-3.5" /> Remove Featured</button>}</ActionMenu>;
 }
+
+function FeaturedStatus({ status }: { status: string }) { const label = status === "pending" ? "Featured pending" : status === "approved" ? "Featured approved" : status === "rejected" ? "Featured rejected" : "Not requested"; return <span className={`mt-1 inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${status === "approved" ? "bg-emerald-50 text-emerald-700" : status === "pending" ? "bg-orange-50 text-orange-700" : status === "rejected" ? "bg-rose-50 text-rose-700" : "bg-slate-100 text-slate-500"}`}>{label}</span>; }
 
 function ShopIdentity({ name }: { name: string }) {
   return (

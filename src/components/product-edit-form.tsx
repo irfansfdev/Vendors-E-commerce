@@ -98,6 +98,7 @@ export function ProductEditForm({
           className="field"
         />
       </label>
+      <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-800 dark:bg-orange-500/10 dark:text-orange-200"><input type="checkbox" name="featured_request" defaultChecked={product.featured_status === "pending" || product.is_featured === true} /> Request Featured placement <span className="text-xs font-medium opacity-75">(admin approval required)</span></label>
       <label className="block">
         <span className="mb-2 block text-xs font-bold">Description</span>
         <textarea
