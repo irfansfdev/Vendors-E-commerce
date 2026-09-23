@@ -4,17 +4,23 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSellerContext } from "@/lib/seller";
 
-const statuses = ["pending", "processing", "shipped", "delivered", "completed", "cancelled"];
+const statuses = ["pending", "confirmed", "preparing", "ready_for_pickup"];
+const nextStatus: Record<string, string> = { pending: "confirmed", confirmed: "preparing", preparing: "ready_for_pickup", processing: "preparing" };
 
 export async function updateSellerOrderStatus(formData: FormData) {
   const { supabase, shop } = await getSellerContext();
   const orderId = String(formData.get("orderId") ?? "");
   const status = String(formData.get("status") ?? "").toLowerCase();
-  if (!orderId || !statuses.includes(status)) throw new Error("Invalid order status");
+  if (!orderId || !statuses.includes(status)) throw new Error("Invalid shop order status");
 
   const { data: current, error: readError } = await supabase.from("shop_orders").select("order_status, parent_order_id").eq("id", orderId).eq("shop_id", String(shop.id)).maybeSingle();
   if (readError) throw new Error(readError.message);
   if (!current) throw new Error("This order could not be found for your shop.");
+  const rawCurrentStatus = String(current.order_status ?? "pending").toLowerCase();
+  const currentStatus = rawCurrentStatus === "processing" ? "preparing" : rawCurrentStatus;
+  if (nextStatus[currentStatus] !== status) {
+    redirect(`/seller/orders/${orderId}?error=${encodeURIComponent("Use the next preparation stage before moving this shop order forward.")}`);
+  }
   const { data, error } = await supabase.from("shop_orders").update({ order_status: status }).eq("id", orderId).eq("shop_id", String(shop.id)).select("id, order_status").maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("This order could not be updated. Check seller order permissions.");
@@ -23,17 +29,5 @@ export async function updateSellerOrderStatus(formData: FormData) {
   revalidatePath("/seller");
   revalidatePath("/account");
   if (current.parent_order_id) revalidatePath(`/account/orders/${current.parent_order_id}`);
-  redirect(`/seller/orders/${orderId}`);
-}
-
-export async function assignRiderAction(formData: FormData) {
-  const { supabase, shop } = await getSellerContext();
-  const orderId = String(formData.get("orderId") ?? "");
-  const riderId = String(formData.get("riderId") ?? "");
-  if (!orderId || !riderId) throw new Error("Choose a rider.");
-  const { data, error } = await supabase.rpc("assign_delivery", { target_shop_order_id: orderId, target_rider_id: riderId });
-  if (error || !data) throw new Error(error?.message ?? "Could not assign rider.");
-  revalidatePath(`/seller/orders/${orderId}`);
-  revalidatePath("/rider");
   redirect(`/seller/orders/${orderId}`);
 }

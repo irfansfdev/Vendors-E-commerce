@@ -46,6 +46,7 @@ main.min-h-screen > section:first-child > div > div:last-child > button:last-chi
 
 html {
   scroll-behavior: smooth;
+  /* overflow-x: hidden;  <-- Yeh line hata dein */
 }
 
 body {
@@ -54,6 +55,45 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  max-width: 100%;
+  /* overflow-x: hidden;  <-- Yeh line bhi hata dein */
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+@media (max-width: 420px) {
+  .site-header .header-theme {
+    display: none;
+  }
+
+  .site-header .header-action {
+    padding-inline: 0.25rem;
+  }
+
+  .site-header > div:first-child {
+    gap: 0.25rem;
+  }
+
+  .site-header .header-logo-wordmark {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .site-header .header-account {
+    display: none;
+  }
+}
+
+@media (max-width: 320px) {
+  .site-header .header-cart {
+    display: none;
+  }
 }
 
 table {
@@ -272,7 +312,6 @@ main.min-h-screen #products > div.mt-7 label.relative {
 
 .data-table {
   width: 100%;
-  min-width: 760px;
   text-align: left;
   font-size: 0.875rem;
 }

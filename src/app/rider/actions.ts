@@ -25,6 +25,23 @@ export async function updateDeliveryAction(formData: FormData) {
   const reason = String(formData.get("failureReason") ?? "").trim() || null;
   const { data, error } = await supabase.rpc("update_delivery_assignment", { target_assignment_id: assignmentId, target_status: status, target_collected_amount: collected, target_failure_reason: reason });
   if (error || data !== true) throw new Error(error?.message ?? "Delivery update was not accepted.");
+  const issueType = String(formData.get("issueType") ?? "").trim();
+  if (status === "failed" && issueType) {
+    const { error: issueError } = await supabase.from("delivery_assignments").update({ issue_type: issueType, issue_note: reason }).eq("id", assignmentId);
+    if (issueError) throw new Error(issueError.message);
+  }
+  revalidatePath("/rider");
+  revalidatePath("/rider/assignments");
+  redirect("/rider/assignments");
+}
+
+export async function rejectDeliveryAction(formData: FormData) {
+  const { supabase } = await import("@/lib/rider").then((module) => module.getRiderContext());
+  const assignmentId = String(formData.get("assignmentId") ?? "");
+  const reason = String(formData.get("rejectionReason") ?? "").trim();
+  if (!assignmentId || reason.length < 3) throw new Error("A rejection reason is required.");
+  const { data, error } = await supabase.rpc("reject_delivery_assignment", { target_assignment_id: assignmentId, target_reason: reason });
+  if (error || data !== true) throw new Error(error?.message ?? "This delivery can no longer be rejected.");
   revalidatePath("/rider");
   revalidatePath("/rider/assignments");
   redirect("/rider/assignments");

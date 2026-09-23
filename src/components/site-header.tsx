@@ -72,8 +72,8 @@ export function SiteHeader({ user }: HeaderProps) {
           Shop now
         </Link>
       </div>
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/92">
-        <div className="mx-auto flex h-[72px] max-w-[1440px] items-center gap-3 px-4 sm:px-6 lg:gap-6 lg:px-8">
+      <header className="site-header sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/92">
+        <div className="mx-auto flex h-[72px] min-w-0 max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:gap-6 lg:px-8">
           <button
   type="button"
   onClick={() => setMenuOpen(true)}
@@ -84,7 +84,7 @@ export function SiteHeader({ user }: HeaderProps) {
 >
   <Menu className="size-5" />
 </button>
-          <Logo />
+          <Logo className="min-w-0 shrink" />
 
           <form
             onSubmit={submitSearch}
@@ -123,7 +123,7 @@ export function SiteHeader({ user }: HeaderProps) {
             <button
               type="button"
               onClick={toggleTheme}
-              className="icon-button grid shrink-0 border border-slate-200 dark:border-white/10"
+              className="header-theme icon-button grid shrink-0 border border-slate-200 dark:border-white/10"
               aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
               aria-pressed={dark}
               title={dark ? "Switch to light mode" : "Switch to dark mode"}
@@ -142,7 +142,7 @@ export function SiteHeader({ user }: HeaderProps) {
               <Heart className="size-[19px]" />
             </Link>
             {user && <NotificationBell />}
-            <Link href="/cart" className="header-action relative">
+            <Link href="/cart" className="header-action header-cart relative shrink-0">
               <span className="relative">
                 <ShoppingCart className="size-5" />
                 {itemCount > 0 && (
@@ -157,7 +157,7 @@ export function SiteHeader({ user }: HeaderProps) {
             </Link>
             {user ? (
               <>
-                <Link href="/account" className="header-action">
+                <Link href="/account" className="header-action header-account shrink-0">
                   <UserRound className="size-[19px]" />
                   <span className="hidden lg:block max-w-28 truncate">
                     <small>Welcome back</small>
@@ -176,7 +176,7 @@ export function SiteHeader({ user }: HeaderProps) {
                 </form>
               </>
             ) : (
-              <Link href="/login" className="header-action">
+              <Link href="/login" className="header-action header-account shrink-0">
                 <UserRound className="size-[19px]" />
                 <span className="hidden xl:block">
                   <small>Sign in</small>Account

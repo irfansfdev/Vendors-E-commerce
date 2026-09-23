@@ -31,5 +31,5 @@ export function ActionMenu({ label, children, disabled = false }: { label: strin
     };
   }, [open]);
 
-  return <div className="relative flex justify-end"><button ref={buttonRef} type="button" disabled={disabled} onClick={() => setOpen((value) => !value)} className="icon-button border-0 bg-transparent hover:bg-slate-100 dark:hover:bg-white/10" aria-label={label} title={label}><MoreHorizontal className="size-4" /></button>{open && createPortal(<div ref={menuRef} onClick={() => setOpen(false)} style={{ top: position.top, left: position.left }} className="fixed z-[100] w-48 rounded-xl border-0 bg-white p-1.5 text-left shadow-xl dark:bg-slate-900">{children}</div>, document.body)}</div>;
+  return <div className="relative flex justify-end"><button ref={buttonRef} type="button" disabled={disabled} onClick={() => setOpen((value) => !value)} className="icon-button border-0 bg-transparent hover:bg-slate-100 dark:hover:bg-white/10" aria-label={label} title={label}><MoreHorizontal className="size-4" /></button>{open && createPortal(<div ref={menuRef} onClick={(event) => { if (!(event.target as HTMLElement).closest("form")) setOpen(false); }} style={{ top: position.top, left: position.left }} className="fixed z-100 w-48 rounded-xl border-0 bg-white p-1.5 text-left shadow-xl dark:bg-slate-900">{children}</div>, document.body)}</div>;
 }

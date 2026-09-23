@@ -222,8 +222,9 @@ export async function updateRiderStatusAction(riderId: string, status: "approved
     if (!(await requireAdmin())) return { success: false, error: "Unauthorized. Admin access required." };
     const supabase = await createClient();
     const user = await getCurrentUser();
-    const { error } = await supabase.from("delivery_profiles").update({ status, rejection_reason: status === "rejected" ? rejectionReason?.trim() || null : null, approved_by: status === "approved" ? user?.id : null, approved_at: status === "approved" ? new Date().toISOString() : null }).eq("id", riderId);
+    const { data, error } = await supabase.from("delivery_profiles").update({ status, rejection_reason: status === "rejected" ? rejectionReason?.trim() || null : null, approved_by: status === "approved" ? user?.id : null, approved_at: status === "approved" ? new Date().toISOString() : null }).eq("id", riderId).select("id,status").maybeSingle();
     if (error) return { success: false, error: error.message };
+    if (!data) return { success: false, error: "Rider was not updated. Check admin permissions or refresh the rider list." };
     revalidatePath("/admin/riders");
     revalidatePath("/rider");
     return { success: true };
@@ -232,7 +233,8 @@ export async function updateRiderStatusAction(riderId: string, status: "approved
 
 export async function updateRiderStatusFormAction(formData: FormData) {
   const result = await updateRiderStatusAction(String(formData.get("riderId") ?? ""), String(formData.get("status") ?? "inactive") as "approved" | "rejected" | "suspended" | "inactive", String(formData.get("rejectionReason") ?? ""));
-  if (!result.success) throw new Error(result.error);
+  if (!result.success) redirect(`/admin/riders?error=${encodeURIComponent(result.error ?? "Could not update rider status.")}`);
+  redirect(`/admin/riders?success=${encodeURIComponent("Rider status updated successfully.")}`);
 }
 
 export async function deleteRiderAction(riderId: string) {
@@ -259,7 +261,7 @@ export async function updateAdminOrderStatus(formData: FormData): Promise<void> 
     if (!(await requireAdmin())) return;
     const orderId = String(formData.get("orderId") ?? "").trim();
     const status = String(formData.get("status") ?? "").toLowerCase();
-    const statuses = ["pending", "processing", "shipped", "out_for_delivery", "delivered", "completed", "cancelled"];
+    const statuses = ["pending", "processing", "shipped", "delivered", "completed", "cancelled"];
     if (!orderId || !statuses.includes(status)) return;
 
     const supabase = await createClient();
@@ -275,4 +277,18 @@ export async function updateAdminOrderStatus(formData: FormData): Promise<void> 
     if (error && typeof error === "object" && "digest" in error && String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")) throw error;
     console.error("Could not update admin order status", error);
   }
+}
+
+export async function assignAdminRiderAction(formData: FormData) {
+  if (!(await requireAdmin())) redirect("/login?next=/admin/deliveries");
+  const shopOrderId = String(formData.get("shopOrderId") ?? "").trim();
+  const riderId = String(formData.get("riderId") ?? "").trim();
+  if (!shopOrderId || !riderId) redirect(`/admin/deliveries?error=${encodeURIComponent("Choose a rider.")}`);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("assign_delivery", { target_shop_order_id: shopOrderId, target_rider_id: riderId });
+  if (error || !data) redirect(`/admin/deliveries?error=${encodeURIComponent(error?.message ?? "Assignment was not accepted. Apply the latest delivery migration and try again.")}`);
+  revalidatePath("/admin/deliveries");
+  revalidatePath("/rider/assignments");
+  revalidatePath(`/seller/orders/${shopOrderId}`);
+  redirect(`/admin/deliveries?success=${encodeURIComponent("Rider assigned successfully. The rider has been notified.")}`);
 }

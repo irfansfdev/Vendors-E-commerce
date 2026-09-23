@@ -68,7 +68,7 @@ export default async function SellerPage({
     };
   });
   const { data: orderItems } = parentOrderIds.length
-    ? await supabase.from("order_items").select("quantity, shop_order_id, product_variants(price, products(price))").in("shop_order_id", shopOrders.map((order) => String(order.id)))
+    ? await supabase.from("order_items").select("quantity, variant_id, shop_order_id, product_variants(id, product_id, price, stock_quantity, products(id, title, price))").in("shop_order_id", shopOrders.map((order) => String(order.id)))
     : { data: [] };
   return <><div className="mx-auto max-w-[1440px] px-4 pt-6 sm:px-6 lg:px-8">{settings === "saved" && <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">Shop settings saved successfully.</p>}</div><SellerDashboard shop={shop} role={role} products={(productsResult.data ?? []) as Record<string, unknown>[]} orders={dashboardOrders} payouts={(payoutsResult.data ?? []) as Record<string, unknown>[]} earnings={(earningsResult.data ?? []) as Record<string, unknown>[]} orderItems={(orderItems ?? []) as Record<string, unknown>[]} /></>;
 }
