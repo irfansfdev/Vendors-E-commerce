@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowUpRight, BadgeDollarSign, Boxes, Check, CircleDollarSign, ShoppingBag, Store, UsersRound, X } from "lucide-react";
+import { ArrowUpRight, BadgeDollarSign, Boxes, CircleDollarSign, ShoppingBag, Store, UsersRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils";
 import { DashboardAnalyticsHub } from "@/components/dashboard-analytics-hub";
-import { updateShopStatusAction } from "../actions/admin";
 import { getCurrentTimeMs } from "@/lib/returns/time";
+import { AdminPendingShopActions } from "@/components/admin-pending-shop-actions";
 
 export const metadata: Metadata = { title: "Platform Admin | BabulShop" };
 export const dynamic = "force-dynamic";
@@ -264,6 +264,6 @@ export default async function AdminPage() {
       />
     </div>
 
-    <section className="surface mt-6 overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-6 dark:border-white/10"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Needs your attention</p><h2 className="mt-1 text-xl font-black">Pending shop requests</h2></div><Link href="/admin/shops?status=pending" className="text-xs font-bold text-orange-500">View all <ArrowUpRight className="ml-1 inline size-3.5" /></Link></div>{pendingShops.length === 0 ? <p className="p-10 text-center text-sm text-slate-500">No pending shop requests right now.</p> : <div className="divide-y divide-slate-100 dark:divide-white/10">{pendingShops.map((shop) => <div key={String(shop.id)} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-extrabold">{String(shop.name ?? "Unnamed shop")}</h3><p className="mt-1 text-xs text-slate-500">/shop/{String(shop.slug ?? "")} · {shop.created_at ? new Date(String(shop.created_at)).toLocaleDateString() : "Recently requested"}</p></div><div className="flex gap-2"><form action={async () => { "use server"; await updateShopStatusAction(String(shop.id), "active"); }}><button className="button-secondary text-emerald-700"><Check className="size-4" /> Approve</button></form><form action={async () => { "use server"; await updateShopStatusAction(String(shop.id), "rejected"); }}><button className="button-secondary text-rose-700"><X className="size-4" /> Reject</button></form></div></div>)}</div>}</section>
+    <section className="surface mt-6 overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-6 dark:border-white/10"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Needs your attention</p><h2 className="mt-1 text-xl font-black">Pending shop requests</h2></div><Link href="/admin/shops?status=pending" className="text-xs font-bold text-orange-500">View all <ArrowUpRight className="ml-1 inline size-3.5" /></Link></div>{pendingShops.length === 0 ? <p className="p-10 text-center text-sm text-slate-500">No pending shop requests right now.</p> : <div className="divide-y divide-slate-100 dark:divide-white/10">{pendingShops.map((shop) => <div key={String(shop.id)} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-extrabold">{String(shop.name ?? "Unnamed shop")}</h3><p className="mt-1 text-xs text-slate-500">/shop/{String(shop.slug ?? "")} · {shop.created_at ? new Date(String(shop.created_at)).toLocaleDateString() : "Recently requested"}</p></div><AdminPendingShopActions shopId={String(shop.id)} /></div>)}</div>}</section>
   </div>;
 }

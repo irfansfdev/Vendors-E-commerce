@@ -2,12 +2,10 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useMemo, useState } from "react";
 import {
   Check,
   ExternalLink,
-  MoreHorizontal,
   Pause,
   Play,
   Search,
@@ -17,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { updateShopStatusAction } from "@/app/actions/admin";
 import { Pagination, useUrlPagination } from "@/components/ui/pagination";
+import { RowActions } from "@/components/ui/row-actions";
 
 type Shop = {
   id: string;
@@ -36,7 +35,6 @@ export function AdminShopsTable({ shops }: { shops: Shop[] }) {
   const [tab, setTab] = useState<Tab>("all");
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const counts = {
     all: shops.length,
     pending: shops.filter((shop) => shop.status === "pending").length,
@@ -68,12 +66,6 @@ export function AdminShopsTable({ shops }: { shops: Shop[] }) {
         ? window.prompt("Why is this shop request being rejected?")?.trim()
         : undefined;
     if (status === "rejected" && !reason) return;
-    if (
-      !window.confirm(
-        `${status === "active" ? "Approve" : status === "suspended" ? "Suspend" : "Reject"} ${shop.name}?`,
-      )
-    )
-      return;
     setBusy(shop.id);
     const result = await updateShopStatusAction(shop.id, status, reason);
     setBusy(null);
@@ -154,7 +146,7 @@ export function AdminShopsTable({ shops }: { shops: Shop[] }) {
                 <th className="px-5 py-4">Orders</th>
                 <th className="px-5 py-4">Sales</th>
                 <th className="px-5 py-4">Status</th>
-                <th className="px-5 py-4 text-right">Actions</th>
+                <th className="w-14 px-2 py-4 text-right"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/10">
@@ -164,9 +156,6 @@ export function AdminShopsTable({ shops }: { shops: Shop[] }) {
                   shop={shop}
                   busy={busy === shop.id}
                   onStatus={changeStatus}
-                  menuKey={`desktop-${shop.id}`}
-                  openMenu={openMenu}
-                  setOpenMenu={setOpenMenu}
                 />
               ))}
             </tbody>
@@ -192,9 +181,6 @@ export function AdminShopsTable({ shops }: { shops: Shop[] }) {
                   shop={shop}
                   busy={busy === shop.id}
                   onStatus={changeStatus}
-                  menuKey={`mobile-${shop.id}`}
-                  open={openMenu === `mobile-${shop.id}`}
-                  setOpenMenu={setOpenMenu}
                 />
               </div>
             </div>
@@ -215,16 +201,10 @@ function ShopRow({
   shop,
   busy,
   onStatus,
-  menuKey,
-  openMenu,
-  setOpenMenu,
 }: {
   shop: Shop;
   busy: boolean;
   onStatus: (shop: Shop, status: "active" | "suspended" | "rejected") => void;
-  menuKey: string;
-  openMenu: string | null;
-  setOpenMenu: (key: string | null) => void;
 }) {
   return (
     <tr className="transition hover:bg-orange-50/40 dark:hover:bg-white/5">
@@ -246,14 +226,11 @@ function ShopRow({
       <td className="px-5 py-4">
         <Status status={shop.status} />
       </td>
-      <td className="px-5 py-4 text-right">
+      <td className="w-14 px-2 py-4 text-right">
         <Actions
           shop={shop}
           busy={busy}
           onStatus={onStatus}
-          menuKey={menuKey}
-          open={openMenu === menuKey}
-          setOpenMenu={setOpenMenu}
         />
       </td>
     </tr>
@@ -303,134 +280,34 @@ function Actions({
   shop,
   busy,
   onStatus,
-  menuKey,
-  open,
-  setOpenMenu,
 }: {
   shop: Shop;
   busy: boolean;
   onStatus: (shop: Shop, status: "active" | "suspended" | "rejected") => void;
-  menuKey: string;
-  open: boolean;
-  setOpenMenu: (key: string | null) => void;
 }) {
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  useEffect(() => {
-    if (!open || !buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    const menuHeight = menuRef.current?.offsetHeight ?? 220;
-    setPosition({
-      top:
-        rect.bottom + menuHeight + 8 > window.innerHeight
-          ? Math.max(8, rect.top - menuHeight - 8)
-          : rect.bottom + 8,
-      left: Math.min(window.innerWidth - 208, Math.max(8, rect.right - 192)),
-    });
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      if (
-        !buttonRef.current?.contains(event.target as Node) &&
-        !menuRef.current?.contains(event.target as Node)
-      )
-        setOpenMenu(null);
-    };
-    const closeOnScroll = () => setOpenMenu(null);
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    window.addEventListener("scroll", closeOnScroll, true);
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutsideClick);
-      window.removeEventListener("scroll", closeOnScroll, true);
-    };
-  }, [open, setOpenMenu]);
-  const menu = open
-    ? createPortal(
-        <div
-          ref={menuRef}
-          style={{ top: position.top, left: position.left }}
-          className="fixed z-100 max-h-[min(70vh,320px)] w-48 max-w-[calc(100vw-1rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white p-1.5 text-left shadow-xl dark:border-white/10 dark:bg-slate-900"
-        >
-          <Link
-            href={`/admin/shops/${shop.id}`}
-            onClick={() => setOpenMenu(null)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50"
-          >
-            <ExternalLink className="size-3.5" /> View details
-          </Link>
-          <Link
-            href={`/shop/${shop.slug}`}
-            target="_blank"
-            onClick={() => setOpenMenu(null)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50"
-          >
-            <Store className="size-3.5" /> View shop
-          </Link>
-          <Link
-            href={`/admin/shops/${shop.id}/products`}
-            onClick={() => setOpenMenu(null)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50"
-          >
-            <Store className="size-3.5" /> View products
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              setOpenMenu(null);
-              onStatus(
-                shop,
-                shop.status === "suspended"
-                  ? "active"
-                  : shop.status === "pending"
-                    ? "active"
-                    : "suspended",
-              );
-            }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50"
-          >
-            {shop.status === "suspended" ? (
-              <Play className="size-3.5 text-emerald-600" />
-            ) : shop.status === "pending" ? (
-              <Check className="size-3.5 text-emerald-600" />
-            ) : (
-              <Pause className="size-3.5 text-rose-600" />
-            )}
-            {shop.status === "suspended"
-              ? "Activate shop"
-              : shop.status === "pending"
-                ? "Approve shop"
-                : "Suspend shop"}
-          </button>
-          {shop.status === "pending" && (
-            <button
-              type="button"
-              onClick={() => {
-                setOpenMenu(null);
-                onStatus(shop, "rejected");
-              }}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50"
-            >
-              <X className="size-3.5" /> Reject shop
-            </button>
-          )}
-        </div>,
-        document.body,
-      )
-    : null;
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        disabled={busy}
-        ref={buttonRef}
-        onClick={() => setOpenMenu(open ? null : menuKey)}
-        className="icon-button border border-slate-200 dark:border-white/10"
-        aria-label="Shop actions"
-      >
-        <MoreHorizontal className="size-4" />
-      </button>
-      {menu}
-    </div>
-  );
+  const statusLabel = shop.status === "suspended" ? "Activate shop" : shop.status === "pending" ? "Approve shop" : "Suspend shop";
+  const statusIcon = shop.status === "suspended" ? Play : shop.status === "pending" ? Check : Pause;
+  const statusValue = shop.status === "suspended" || shop.status === "pending" ? "active" : "suspended";
+  const statusConfirm = {
+    title: `${statusLabel.replace(/\b\w/g, (letter) => letter.toUpperCase())}?`,
+    message: `${statusLabel} for ${shop.name}?`,
+    confirmLabel: statusLabel,
+  };
+  return <RowActions label="Shop actions" disabled={busy} items={[
+    { id: "details", type: "link", label: "View details", icon: ExternalLink, href: `/admin/shops/${shop.id}` },
+    { id: "storefront", type: "link", label: "View shop", icon: Store, href: `/shop/${shop.slug}`, target: "_blank" },
+    { id: "products", type: "link", label: "View products", icon: Store, href: `/admin/shops/${shop.id}/products` },
+    { id: "status", type: "button", label: statusLabel, icon: statusIcon, confirm: statusConfirm, onSelect: () => onStatus(shop, statusValue) },
+    ...(shop.status === "pending" ? [{
+      id: "reject",
+      type: "button" as const,
+      label: "Reject shop",
+      icon: X,
+      tone: "danger" as const,
+      confirm: { title: `Reject ${shop.name}?`, message: "Why is this shop request being rejected?", confirmLabel: "Reject shop" },
+      onSelect: () => onStatus(shop, "rejected"),
+    }] : []),
+  ]} />;
 }
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (

@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { ReturnStatusBadge } from "@/components/return-status-badge";
 import { Pagination, useUrlPagination } from "@/components/ui/pagination";
+import { ClickableRow } from "@/components/ui/clickable-row";
 
 export type ReturnsListRow = {
   id: string;
@@ -121,12 +122,12 @@ export function ReturnsListTable({ role, rows, emptyMessage, now }: {
     {visible.length === 0 ? <div className="p-10 text-center text-sm text-slate-500">{query ? "No returns match your search." : emptyMessage}</div> : <>
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-left text-sm"><thead className="bg-slate-50 text-[10px] uppercase tracking-[.1em] text-slate-500 dark:bg-white/5"><tr>{header.map((cell) => <th key={cell} className="px-4 py-3">{cell}</th>)}</tr></thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-white/10">{visible.map((row) => <tr key={row.id} tabIndex={0} onClick={() => window.location.assign(row.href)} onKeyDown={(event) => { if (event.key === "Enter") window.location.assign(row.href); }} className="cursor-pointer hover:bg-orange-50/40 focus-visible:outline focus-visible:outline-orange-500 dark:hover:bg-white/5">
+          <tbody className="divide-y divide-slate-100 dark:divide-white/10">{visible.map((row) => <ClickableRow key={row.id} href={row.href} className="hover:bg-orange-50/40 dark:hover:bg-white/5">
             {role === "customer" && <><td className="px-4 py-4"><Link href={row.href} className="font-black">Return #{shortId(row.id)}</Link></td><td className="px-4 py-4">#{shortId(row.orderId)}</td><td className="max-w-48 truncate px-4 py-4">{itemSummary(row.items)}</td><td className="px-4 py-4">{row.reason}</td><td className="px-4 py-4 font-bold">{formatCurrency(row.amount ?? 0)}</td><td className="px-4 py-4"><ReturnStatusBadge status={row.status} /></td><td className="px-4 py-4">{new Date(row.requestedAt).toLocaleDateString()}</td></>}
             {role === "seller" && <><td className="px-4 py-4"><Link href={row.href} className="font-black">Return #{shortId(row.id)}</Link></td><td className="px-4 py-4">#{shortId(row.orderId)}</td><td className="px-4 py-4">{row.customer}</td><td className="max-w-48 truncate px-4 py-4">{itemSummary(row.items)}</td><td className="px-4 py-4">{row.reason}</td><td className="px-4 py-4">{row.status === "requested" ? remainingTime(row.dueAt, now) : "—"}</td><td className="px-4 py-4"><ReturnStatusBadge status={row.status} overdue={row.status === "requested" && !!row.dueAt && new Date(row.dueAt).getTime() <= now} /></td></>}
             {role === "rider" && <><td className="px-4 py-4"><Link href={row.href} className="font-black">Return #{shortId(row.id)}</Link></td><td className="px-4 py-4">{row.pickupArea || "Area unavailable"}</td><td className="px-4 py-4">{row.shop}</td><td className="px-4 py-4">{row.itemCount ?? row.items.length} items</td><td className="px-4 py-4"><ReturnStatusBadge status={row.status} /></td></>}
             {role === "admin" && <><td className="px-4 py-4"><Link href={row.href} className="font-black">Return #{shortId(row.id)}</Link></td><td className="px-4 py-4">{row.shop}</td><td className="px-4 py-4">{row.customer}</td><td className="max-w-48 truncate px-4 py-4">{itemSummary(row.items)}</td><td className="px-4 py-4">{row.reason}</td><td className="px-4 py-4 font-bold">{formatCurrency(row.amount ?? 0)}</td><td className="px-4 py-4"><ReturnStatusBadge status={row.status} /></td><td className="px-4 py-4">{row.age ?? formatAge(row.requestedAt, now)}</td><td className="px-4 py-4">{row.flags?.join(", ") || "—"}</td></>}
-          </tr>)}</tbody>
+          </ClickableRow>)}</tbody>
         </table>
       </div>
       <div className="grid gap-3 p-3 md:hidden">{visible.map((row) => <Link key={row.id} href={row.href} className="rounded-2xl border border-slate-200 p-4 dark:border-white/10">

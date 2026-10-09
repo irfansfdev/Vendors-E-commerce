@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { deleteCategoryAction, saveCategoryAction } from "@/app/actions/admin";
 import { Pagination, useUrlPagination } from "@/components/ui/pagination";
+import { RowActions } from "@/components/ui/row-actions";
 
 type CategoryItem = {
   id: string;
@@ -271,10 +272,6 @@ export function CategoryManager({
   }
 
   async function handleDeleteCategory(catId: string, catName: string) {
-    if (!confirm(`Are you sure you want to delete category "${catName}"?`)) {
-      return;
-    }
-
     setDeletingId(catId);
     try {
       const result = await deleteCategoryAction(catId);
@@ -500,15 +497,15 @@ export function CategoryManager({
           <p className="p-12 text-center text-slate-500">No categories found.</p>
         ) : (
           <div className="overflow-x-auto">
-            <div className="grid min-w-[1120px] grid-cols-[minmax(300px,1.35fr)_minmax(200px,1fr)_100px_125px_110px_230px] gap-4 border-b border-slate-100 bg-slate-50/70 px-5 py-4 text-[10px] font-black uppercase tracking-[.12em] text-slate-400 dark:border-white/10 dark:bg-white/5">
+            <div className="grid min-w-[1000px] grid-cols-[minmax(300px,1.35fr)_minmax(200px,1fr)_100px_125px_110px_56px] gap-4 border-b border-slate-100 bg-slate-50/70 px-5 py-4 text-[10px] font-black uppercase tracking-[.12em] text-slate-400 dark:border-white/10 dark:bg-white/5">
               <span>Category</span>
               <span>Slug</span>
               <span>Products</span>
               <span>Created</span>
               <span>Image</span>
-              <span className="text-right">Actions</span>
+              <span className="sr-only">Actions</span>
             </div>
-            <div className="min-w-[1120px] divide-y divide-slate-100 dark:divide-white/10">
+            <div className="min-w-[1000px] divide-y divide-slate-100 dark:divide-white/10">
             {visibleCategories.map((category) => {
               const isEditing = editingId === category.id;
               const displayImage =
@@ -516,7 +513,7 @@ export function CategoryManager({
                 "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=400&q=80";
 
               return (
-                <div key={category.id} className="grid gap-4 p-5 transition hover:bg-orange-50/40 dark:hover:bg-white/5 lg:grid-cols-[minmax(300px,1.35fr)_minmax(200px,1fr)_100px_125px_110px_230px] lg:items-center">
+                <div key={category.id} className="grid gap-4 p-5 transition hover:bg-orange-50/40 dark:hover:bg-white/5 lg:grid-cols-[minmax(300px,1.35fr)_minmax(200px,1fr)_100px_125px_110px_56px] lg:items-center">
                   {isEditing ? (
                     /* Edit Mode Form */
                     <form
@@ -684,25 +681,11 @@ export function CategoryManager({
                       <p className="text-sm font-semibold">{category.productCount}</p>
                       <p className="text-xs text-slate-500">{category.createdAt ? new Date(category.createdAt).toLocaleDateString() : "-"}</p>
                       <span className="text-xs text-slate-400">{category.image_url ? "Image added" : "No image"}</span>
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => startEditing(category)}
-                          className="button-secondary text-xs"
-                        >
-                          <Pencil className="size-3.5" /> Edit
-                        </button>
-                        <button
-                          disabled={deletingId === category.id}
-                          onClick={() => handleDeleteCategory(category.id, category.name)}
-                          className="button-secondary text-xs text-rose-600 hover:border-rose-300 hover:text-rose-700"
-                        >
-                          {deletingId === category.id ? (
-                            <LoaderCircle className="size-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-3.5" />
-                          )}
-                          Delete
-                        </button>
+                      <div className="flex justify-end">
+                        <RowActions label="Category actions" disabled={deletingId === category.id} items={[
+                          { id: "edit", type: "button", label: "Edit", icon: Pencil, onSelect: () => startEditing(category) },
+                          { id: "delete", type: "button", label: "Delete", icon: Trash2, tone: "danger", confirm: { title: `Delete category "${category.name}"?`, message: "This action cannot be undone.", confirmLabel: "Delete" }, onSelect: () => handleDeleteCategory(category.id, category.name) },
+                        ]} />
                       </div>
                     </>
                   )}

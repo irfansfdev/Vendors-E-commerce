@@ -1,10 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { Edit3 } from "lucide-react";
-import { ActionMenu } from "@/components/action-menu";
-import { DeleteProductButton } from "@/components/delete-product-button";
+import { RowActions } from "@/components/ui/row-actions";
+import { Edit3, Trash2 } from "lucide-react";
 import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 
 type Product = { id: string; title: string; variantCount: number; price: number; stock: number; status: string; featured: boolean; createdAt: string; slug: string };
@@ -18,7 +15,7 @@ export function SellerProductsTable({ products, total, onDelete }: { products: P
       <div className="overflow-x-auto">
         <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="border-b border-slate-100 bg-slate-50/80 text-[10px] font-black uppercase tracking-[.1em] text-slate-400 dark:border-white/10 dark:bg-white/5">
-            <tr><th className="px-5 py-4">Product</th><th className="px-5 py-4">Variants</th><th className="px-5 py-4">Price</th><th className="px-5 py-4">Stock</th><th className="px-5 py-4">Status</th><th className="px-5 py-4">Featured</th><th className="px-5 py-4">Created</th><th className="px-5 py-4 text-right">Actions</th></tr>
+            <tr><th className="px-5 py-4">Product</th><th className="px-5 py-4">Variants</th><th className="px-5 py-4">Price</th><th className="px-5 py-4">Stock</th><th className="px-5 py-4">Status</th><th className="px-5 py-4">Featured</th><th className="px-5 py-4">Created</th><th className="w-14 px-2 py-4 text-right"><span className="sr-only">Actions</span></th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-white/10">
             {visible.map((product) => (
@@ -30,7 +27,10 @@ export function SellerProductsTable({ products, total, onDelete }: { products: P
                 <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${product.status === "published" ? "bg-emerald-50 text-emerald-700" : product.status === "archived" ? "bg-rose-50 text-rose-700" : "bg-orange-50 text-orange-700"}`}>{product.status}</span></td>
                 <td className="px-5 py-4">{product.featured ? "Yes" : "No"}</td>
                 <td className="px-5 py-4 text-slate-500">{product.createdAt ? new Date(product.createdAt).toLocaleDateString() : "-"}</td>
-                <td className="px-5 py-4"><ActionMenu label="Product actions"><Link href={`/seller/products/${product.id}/edit`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold hover:bg-orange-50 dark:hover:bg-white/5"><Edit3 className="size-3.5" /> Edit</Link><form action={async () => { await onDelete(product.id); }}><DeleteProductButton /></form></ActionMenu></td>
+                <td className="w-14 px-2 py-4 text-right"><RowActions label="Product actions" items={[
+                  { id: "edit", type: "link", label: "Edit", icon: Edit3, href: `/seller/products/${product.id}/edit` },
+                  { id: "delete", type: "form", label: "Delete", icon: Trash2, tone: "danger", action: async () => { await onDelete(product.id); }, confirm: { title: "Delete this product?", message: "Delete this product permanently? This action cannot be undone.", confirmLabel: "Delete" } },
+                ]} /></td>
               </tr>
             ))}
           </tbody>

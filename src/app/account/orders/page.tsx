@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LogOut, RotateCcw, ShoppingBag } from "lucide-react";
+import { LogOut, ShoppingBag } from "lucide-react";
 import { AccountSidebar } from "@/components/account-sidebar";
 import { signoutAction } from "@/app/auth/actions";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
@@ -10,6 +10,8 @@ import { getOrderStatus } from "@/lib/order-status";
 import { formatReturnDate, getReturnDeadline, isReturnWindowOpen } from "@/lib/returns/eligibility";
 import { buildPaginationMeta, parsePagination } from "@/lib/pagination";
 import { UrlPagination } from "@/components/ui/pagination";
+import { AccountOrderActions, type AccountOrderReturnAction } from "@/components/account-order-actions";
+import { ClickableCard } from "@/components/ui/clickable-row";
 
 export const metadata: Metadata = { title: "My orders" };
 export const dynamic = "force-dynamic";
@@ -84,9 +86,53 @@ export default async function AccountOrdersPage({ searchParams }: { searchParams
               {orders.map((order) => {
                 const shopOrders = (order.shop_orders ?? []) as Row[];
                 const orderStatus = getOrderStatus(order);
+                const orderHref = `/account/orders/${String(order.id)}`;
+                const orderReturnActions: AccountOrderReturnAction[] = shopOrders.flatMap<AccountOrderReturnAction>((shopOrder) => {
+                  const openReturn = returnByShopOrder.get(String(shopOrder.id));
+                  if (openReturn) {
+                    return [{
+                      id: `view-return-${String(openReturn.id)}`,
+                      label: "View return",
+                      href: `/account/returns/${String(openReturn.id)}`,
+                    }];
+                  }
+                  const shopValue = shopOrder.shops ?? {};
+                  const shop = (Array.isArray(shopValue) ? shopValue[0] : shopValue) as Row;
+                  const windowDays = Number(shop.return_window_days ?? 7);
+                  const deadline = getReturnDeadline(shopOrder.delivered_at, windowDays);
+                  const delivered = ["delivered", "completed"].includes(String(shopOrder.order_status ?? "").toLowerCase());
+                  return delivered && isReturnWindowOpen(deadline)
+                    ? [{
+                        id: `return-items-${String(shopOrder.id)}`,
+                        label: "Return items",
+                        href: `/account/orders/${String(shopOrder.id)}/return`,
+                      }]
+                    : [];
+                });
+                const hasReturnActions = orderReturnActions.length > 0;
                 return (
-                  <article key={String(order.id)} className="p-5">
-                    <Link href={`/account/orders/${String(order.id)}`} className="flex flex-wrap items-center justify-between gap-4 hover:text-orange-600">
+                  <ClickableCard
+                    key={String(order.id)}
+                    href={orderHref}
+                    className="p-5"
+                    enabled={!hasReturnActions}
+                  >
+                    {hasReturnActions ? (
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                          <h3 className="font-extrabold">Order #{String(order.id).slice(0, 8)}</h3>
+                          <p className="mt-1 text-xs text-slate-500">{order.created_at ? new Date(String(order.created_at)).toLocaleString() : ""}</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-right">
+                          <div>
+                            <p className="font-black">{formatCurrency(Number(order.total_amount ?? order.subtotal ?? order.total ?? 0))}</p>
+                            <span className="text-xs font-bold capitalize text-orange-600">{String(orderStatus ?? order.order_status ?? "pending")}</span>
+                          </div>
+                          <AccountOrderActions orderHref={orderHref} returnActions={orderReturnActions} />
+                        </div>
+                      </div>
+                    ) : (
+                    <Link href={orderHref} className="flex flex-wrap items-center justify-between gap-4 hover:text-orange-600">
                       <div>
                         <h3 className="font-extrabold">Order #{String(order.id).slice(0, 8)}</h3>
                         <p className="mt-1 text-xs text-slate-500">{order.created_at ? new Date(String(order.created_at)).toLocaleString() : ""}</p>
@@ -96,6 +142,7 @@ export default async function AccountOrdersPage({ searchParams }: { searchParams
                         <span className="text-xs font-bold capitalize text-orange-600">{String(orderStatus ?? order.order_status ?? "pending")}</span>
                       </div>
                     </Link>
+                    )}
                     {shopOrders.length > 0 && (
                       <div className="mt-4 space-y-3 border-t border-slate-100 pt-4 dark:border-white/10">
                         {shopOrders.map((shopOrder) => {
@@ -104,8 +151,6 @@ export default async function AccountOrdersPage({ searchParams }: { searchParams
                           const windowDays = Number(shop.return_window_days ?? 7);
                           const deadline = getReturnDeadline(shopOrder.delivered_at, windowDays);
                           const delivered = ["delivered", "completed"].includes(String(shopOrder.order_status ?? "").toLowerCase());
-                          const openReturn = returnByShopOrder.get(String(shopOrder.id));
-                          const canRequest = delivered && isReturnWindowOpen(deadline) && !openReturn;
                           return (
                             <div key={String(shopOrder.id)} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 dark:bg-white/5">
                               <div>
@@ -114,22 +159,13 @@ export default async function AccountOrdersPage({ searchParams }: { searchParams
                                 {delivered && deadline && <p className="mt-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">Return by {formatReturnDate(deadline)}</p>}
                                 {delivered && !deadline && <p className="mt-1 text-xs text-slate-400">Returns are disabled for this shop.</p>}
                               </div>
-                              {openReturn ? (
-                                <Link className="inline-flex items-center gap-2 text-xs font-black text-orange-600" href={`/account/returns/${String(openReturn.id)}`}>
-                                  <RotateCcw className="size-4" /> View return
-                                </Link>
-                              ) : canRequest ? (
-                                <Link className="button-secondary min-h-10 px-3 py-2 text-xs" href={`/account/orders/${String(shopOrder.id)}/return`}>
-                                  Return items
-                                </Link>
-                              ) : null}
                             </div>
                           );
                         })}
                       </div>
                     )}
                     {!error && !returnResult.error && <div className="px-5 pb-5"><UrlPagination total={count ?? 0} /></div>}
-                  </article>
+                  </ClickableCard>
                 );
               })}
             </div>
