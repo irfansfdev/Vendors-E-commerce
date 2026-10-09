@@ -22,6 +22,7 @@ type VariantSkuRow = { sku?: string | null; product_id?: string | null };
 type ProductFormProps = {
   productId?: string;
   initialShopId?: string;
+  returnTo?: string;
   product?: ProductRow;
   shops?: Shop[];
   categories?: Category[];
@@ -151,7 +152,7 @@ export function ProductForm(props: ProductFormProps) {
       if (selectedCategories.length) { const categoryInsert = await supabase.from("product_categories").insert(selectedCategories.map((categoryId) => ({ product_id: id, category_id: categoryId }))); if (categoryInsert.error) throw categoryInsert.error; }
       const imageDelete = await supabase.from("product_images").delete().eq("product_id", id); if (imageDelete.error) throw imageDelete.error;
       if (images.length) { let imageInsert = await supabase.from("product_images").insert(images.map((image, index) => ({ id: crypto.randomUUID(), product_id: id, image_url: image.url, alt: image.alt || name, is_primary: image.is_primary, display_order: index + 1 }))); if (imageInsert.error && /alt|is_primary/i.test(imageInsert.error.message)) imageInsert = await supabase.from("product_images").insert(images.map((image, index) => ({ id: crypto.randomUUID(), product_id: id, image_url: image.url, display_order: index + 1 }))); if (imageInsert.error) throw imageInsert.error; }
-      toast.success("Product saved successfully.", { id: toastId }); router.push("/admin/products"); router.refresh();
+      toast.success("Product saved successfully.", { id: toastId }); router.push(props.returnTo ?? "/admin/products"); router.refresh();
     } catch (error) {
       const message = error instanceof Error ? error.message : typeof error === "object" && error !== null && "message" in error ? String((error as { message: unknown }).message) : "Could not save product.";
       toast.error(message, { id: toastId });
@@ -167,7 +168,7 @@ export function ProductForm(props: ProductFormProps) {
       const variantDelete = await supabase.from("product_variants").delete().eq("product_id", productId);
       if (variantDelete.error) toast.warning("Some variants are referenced by orders and could not be deleted.");
       const productDelete = await supabase.from("products").delete().eq("id", productId); if (productDelete.error) throw productDelete.error;
-      toast.success("Product deleted.", { id: toastId }); router.push("/admin/products"); router.refresh();
+      toast.success("Product deleted.", { id: toastId }); router.push(props.returnTo ?? "/admin/products"); router.refresh();
     } catch (error) { toast.error(error instanceof Error ? error.message : "Could not delete product.", { id: toastId }); }
     finally { setDeleting(false); setShowDelete(false); }
   }

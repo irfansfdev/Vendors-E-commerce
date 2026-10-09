@@ -362,7 +362,7 @@ export function ProductEditor({ shopId, categories = [] }: { shopId: string; cat
       description: `"${productName}" has been sent to the admin for review. It will go live after approval.`,
     });
 
-    router.push("/seller");
+    router.push("/seller/products");
     router.refresh();
   }
 

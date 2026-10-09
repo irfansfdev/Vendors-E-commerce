@@ -48,7 +48,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body className={plusJakartaSans.variable}>
         <Providers>
           <SiteHeader
-            user={user ? { email: user.email, name: String(user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? ""), isAdmin: user.app_metadata?.is_admin === true, isSeller, isRider } : null}
+            user={user ? { email: user.email, name: String(user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? ""), avatarUrl: String(user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? "") || null, isAdmin: user.app_metadata?.is_admin === true, isSeller, isRider } : null}
           />
           {children}
           <SiteFooter />
