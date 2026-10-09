@@ -4,13 +4,19 @@ import { Box, ChevronLeft, ExternalLink, Plus } from "lucide-react";
 import { deleteProductAction } from "./actions";
 import { SellerProductsTable } from "@/components/seller-products-table";
 import { getSellerContext } from "@/lib/seller";
+import { buildPaginationMeta, parsePagination } from "@/lib/pagination";
 
 export const metadata: Metadata = { title: "Products | Seller" };
 export const dynamic = "force-dynamic";
 
-export default async function SellerProductsPage() {
+export default async function SellerProductsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { supabase, shop } = await getSellerContext();
-  const { data } = await supabase.from("products").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false });
+  const pagination = parsePagination(await searchParams);
+  let { data, count } = await supabase.from("products").select("*", { count: "exact" }).eq("shop_id", shop.id).order("created_at", { ascending: false }).range(pagination.from, pagination.to);
+  const meta = buildPaginationMeta(count ?? 0, pagination.page, pagination.pageSize);
+  if ((count ?? 0) > 0 && meta.page !== pagination.page) {
+    ({ data, count } = await supabase.from("products").select("*", { count: "exact" }).eq("shop_id", shop.id).order("created_at", { ascending: false }).range(meta.from, meta.to));
+  }
   const products = (data ?? []) as Record<string, unknown>[];
   const productIds = products.map((product) => String(product.id));
   const { data: variants } = productIds.length ? await supabase.from("product_variants").select("product_id,sku,stock_quantity").in("product_id", productIds) : { data: [] };
@@ -30,6 +36,6 @@ export default async function SellerProductsPage() {
       <div><Link href="/seller" className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-orange-500"><ChevronLeft className="size-4" /> Dashboard</Link><p className="mt-5 text-[11px] font-black uppercase tracking-[.18em] text-orange-500">Catalog management</p><h1 className="mt-2 text-4xl font-black tracking-[-.055em]">Products</h1><p className="mt-2 text-sm text-slate-500">Manage the listings shown in your shop.</p></div>
       <div className="flex gap-2">{shopSlug && <Link href={`/shop/${shopSlug}`} className="button-secondary"><ExternalLink className="size-4" /> View shop</Link>}<Link href="/seller/products/new" className="button-primary bg-orange-500 hover:bg-orange-600"><Plus className="size-4" /> Add product</Link></div>
     </div>
-    {rows.length === 0 ? <section className="surface p-12 text-center"><Box className="mx-auto size-10 text-slate-300" /><p className="mt-3 font-bold">No products yet</p><Link href="/seller/products/new" className="mt-4 inline-flex button-primary bg-orange-500">Create your first product</Link></section> : <SellerProductsTable products={rows} onDelete={deleteProductAction} />}
+    {(count ?? 0) === 0 ? <section className="surface p-12 text-center"><Box className="mx-auto size-10 text-slate-300" /><p className="mt-3 font-bold">No products yet</p><Link href="/seller/products/new" className="mt-4 inline-flex button-primary bg-orange-500">Create your first product</Link></section> : <SellerProductsTable products={rows} total={count ?? 0} onDelete={deleteProductAction} />}
   </main>;
 }

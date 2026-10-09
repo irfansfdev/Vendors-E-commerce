@@ -21,8 +21,16 @@ export default async function SellerSettingsPage({
     const { supabase: client, shop: currentShop } = await getSellerContext();
     const name = String(formData.get("name") ?? "").trim();
     const description = String(formData.get("description") ?? "").trim();
+    const returnWindowDays = Number(formData.get("return_window_days"));
     if (name.length < 2 || !description) return;
-    const updates: Record<string, string> = { name, description };
+    if (!Number.isInteger(returnWindowDays) || returnWindowDays < 0 || returnWindowDays > 365) {
+      redirect(`/seller/settings?error=${encodeURIComponent("Return window must be between 0 and 365 days.")}`);
+    }
+    const updates: Record<string, string | number> = {
+      name,
+      description,
+      return_window_days: returnWindowDays,
+    };
     for (const field of ["logo", "banner"] as const) {
       const file = formData.get(field);
       if (!file || typeof file === "string" || file.size === 0) continue;
@@ -99,6 +107,24 @@ export default async function SellerSettingsPage({
             className="field"
           />
         </label>
+        <section className="rounded-2xl border border-slate-200 p-4 dark:border-white/10">
+          <label className="block">
+            <span className="text-sm font-black">Return window</span>
+            <span className="mt-1 block text-xs leading-5 text-slate-500">Customers can request eligible returns within this many days after delivery. Set to 0 to disable returns for the entire shop.</span>
+            <span className="mt-3 flex items-center gap-3">
+              <input
+                name="return_window_days"
+                type="number"
+                min={0}
+                max={365}
+                required
+                defaultValue={Number(shop.return_window_days ?? 7)}
+                className="field w-32"
+              />
+              <span className="text-sm text-slate-500">days</span>
+            </span>
+          </label>
+        </section>
         <label className="block">
           <span className="mb-2 block text-xs font-bold">Description</span>
           <textarea

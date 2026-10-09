@@ -1,19 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { updateDeliveryAction } from "@/app/rider/actions";
+import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 
 export type RiderDeliveryRow = { id: string; shopOrderId: string; shopName: string; status: string; amount: number; paymentMethod: string; assignedAt: string };
-const pageSize = 8;
-
-export function RiderDeliveriesTable({ rows }: { rows: RiderDeliveryRow[] }) {
-  const [page, setPage] = useState(1);
-  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const visible = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  return <section className="surface w-full max-w-full overflow-hidden"><div className="hidden md:block"><table className="w-full table-fixed text-left text-sm"><colgroup><col className="w-[18%]" /><col className="w-[15%]" /><col className="w-[14%]" /><col className="w-[14%]" /><col className="w-[12%]" /><col className="w-[27%]" /></colgroup><thead className="border-b border-slate-100 bg-slate-50 text-[10px] uppercase tracking-[.12em] text-slate-500 dark:border-white/10 dark:bg-white/5"><tr><th className="px-3 py-4">Shop order</th><th className="px-3 py-4">Shop</th><th className="px-3 py-4">Amount</th><th className="px-3 py-4">Assigned</th><th className="px-3 py-4">Status</th><th className="px-3 py-4 text-right">Next action</th></tr></thead><tbody className="divide-y divide-slate-100 dark:divide-white/10">{visible.map((row) => <DeliveryRow key={row.id} row={row} />)}</tbody></table></div><div className="grid gap-3 p-4 md:hidden">{visible.map((row) => <DeliveryCard key={row.id} row={row} />)}</div><div className="flex items-center justify-between border-t border-slate-100 px-5 py-4 text-xs dark:border-white/10"><span className="font-semibold text-slate-500">Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, rows.length)} of {rows.length}</span><nav className="flex items-center gap-2" aria-label="Delivery pagination"><button type="button" disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} className="icon-button border border-slate-200 disabled:opacity-40 dark:border-white/10" aria-label="Previous page"><ChevronLeft className="size-4" /></button><span className="font-black">{currentPage} / {pageCount}</span><button type="button" disabled={currentPage === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} className="icon-button border border-slate-200 disabled:opacity-40 dark:border-white/10" aria-label="Next page"><ChevronRight className="size-4" /></button></nav></div></section>;
+export function RiderDeliveriesTable({ rows, total }: { rows: RiderDeliveryRow[]; total?: number }) {
+  const totalRows = total ?? rows.length;
+  const pagination = useUrlPagination(totalRows);
+  const visible = total === undefined ? rows.slice(pagination.from, pagination.to + 1) : rows;
+  return <section data-pagination-list className={`surface w-full max-w-full overflow-hidden transition-opacity ${pagination.isPending ? "pointer-events-none opacity-60" : ""}`}><div className="hidden md:block"><table className="w-full table-fixed text-left text-sm"><colgroup><col className="w-[18%]" /><col className="w-[15%]" /><col className="w-[14%]" /><col className="w-[14%]" /><col className="w-[12%]" /><col className="w-[27%]" /></colgroup><thead className="border-b border-slate-100 bg-slate-50 text-[10px] uppercase tracking-[.12em] text-slate-500 dark:border-white/10 dark:bg-white/5"><tr><th className="px-3 py-4">Shop order</th><th className="px-3 py-4">Shop</th><th className="px-3 py-4">Amount</th><th className="px-3 py-4">Assigned</th><th className="px-3 py-4">Status</th><th className="px-3 py-4 text-right">Next action</th></tr></thead><tbody className="divide-y divide-slate-100 dark:divide-white/10">{visible.map((row) => <DeliveryRow key={row.id} row={row} />)}</tbody></table></div><div className="grid gap-3 p-4 md:hidden">{visible.map((row) => <DeliveryCard key={row.id} row={row} />)}</div><div className="px-5 pb-4"><Pagination total={totalRows} page={pagination.page} pageSize={pagination.pageSize} totalPages={pagination.totalPages} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} /></div></section>;
 }
 
 function DeliveryRow({ row }: { row: RiderDeliveryRow }) {

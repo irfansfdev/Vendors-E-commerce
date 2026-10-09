@@ -27,7 +27,7 @@ export async function updateDeliveryAction(formData: FormData) {
   if (error || data !== true) throw new Error(error?.message ?? "Delivery update was not accepted.");
   const issueType = String(formData.get("issueType") ?? "").trim();
   if (status === "failed" && issueType) {
-    const { error: issueError } = await supabase.from("delivery_assignments").update({ issue_type: issueType, issue_note: reason }).eq("id", assignmentId);
+    const { error: issueError } = await supabase.from("delivery_assignments").update({ issue_type: issueType, issue_note: reason }).eq("id", assignmentId).eq("assignment_type", "delivery");
     if (issueError) throw new Error(issueError.message);
   }
   revalidatePath("/rider");

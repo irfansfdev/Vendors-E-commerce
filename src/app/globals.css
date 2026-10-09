@@ -16,12 +16,18 @@ form[data-edit-mode="true"] > section:nth-child(2) {
   color-scheme: light;
   --page: #f8fafc;
   --ink: #0f172a;
+  --pagination-accent: #5035f5;
+  --pagination-bg: #f1f5f9;
+  --pagination-border: #6366f1;
 }
 
 :root.dark {
   color-scheme: dark;
   --page: #080d18;
   --ink: #f8fafc;
+  --pagination-accent: #7664ff;
+  --pagination-bg: #1e293b;
+  --pagination-border: #8173ff;
 }
 
 /* Keep shop actions in the profile flow instead of floating over the banner. */

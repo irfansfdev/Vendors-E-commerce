@@ -6,11 +6,12 @@ import { formatCurrency } from "@/lib/utils";
 import { DashboardAnalyticsHub } from "@/components/dashboard-analytics-hub";
 
 type Row = Record<string, unknown>;
-type Props = { shop: Row; products: Row[]; orders: Row[]; payouts: Row[]; earnings: Row[]; orderItems: Row[]; role: string };
+type Props = { shop: Row; products: Row[]; orders: Row[]; payouts: Row[]; earnings: Row[]; orderItems: Row[]; returns: Row[]; role: string; asOfMs: number };
 
 function orderAmount(order: Row) {
   const direct = Number(order.gross_amount ?? order.calculated_total ?? order.total_amount ?? order.subtotal ?? order.total ?? order.amount ?? order.order_total ?? order.grand_total ?? order.total_price ?? 0);
-  return direct > 0 ? direct : Number(order.seller_earnings ?? 0) + Number(order.platform_commission ?? 0);
+  const gross = direct > 0 ? direct : Number(order.seller_earnings ?? 0) + Number(order.platform_commission ?? 0);
+  return Math.max(0, gross - Number(order.refund_amount ?? 0));
 }
 
 function orderStatus(order: Row) {
@@ -41,7 +42,7 @@ function getMonthlyTimeline(orders: Row[]) {
   });
 }
 
-export function SellerDashboard({ shop, products, orders, payouts, earnings, orderItems, role }: Props) {
+export function SellerDashboard({ shop, products, orders, payouts, earnings, orderItems, returns, role, asOfMs }: Props) {
   const totalsByOrder = new Map<string, number>();
   for (const item of orderItems) {
     const variant = item.product_variants as Row | null;
@@ -69,6 +70,14 @@ export function SellerDashboard({ shop, products, orders, payouts, earnings, ord
   const availableBalance = earnings.filter((earning) => String(earning.status).toLowerCase() === "available").reduce((total, earning) => total + earningAmount(earning), 0);
   const paidPayout = payouts.filter((payout) => String(payout.status).toLowerCase() === "paid").reduce((total, payout) => total + payoutAmount(payout), 0);
   const refunds = orders.reduce((total, order) => total + Number(order.refund_amount ?? 0), 0);
+  const needsReturnResponse = returns.filter((item) => item.status === "requested"
+    && item.seller_response_due_at).length;
+  const openReturns = returns.filter((item) => !["refunded", "rejected", "cancelled"].includes(String(item.status))).length;
+  const thirtyDaysAgo = asOfMs - 30 * 24 * 60 * 60 * 1000;
+  const refundedLast30Days = returns
+    .filter((item) => item.status === "refunded" && item.refunded_at
+      && new Date(String(item.refunded_at)).getTime() >= thirtyDaysAgo)
+    .reduce((sum, item) => sum + Number(item.refund_amount ?? 0), 0);
   const productsSold = orderItems.reduce((total, item) => total + Number(item.quantity ?? 0), 0);
 
   // Top products from order items
@@ -182,8 +191,8 @@ export function SellerDashboard({ shop, products, orders, payouts, earnings, ord
   const shopSlug = String(shop.slug ?? "");
   const shopName = String(shop.name ?? "Your shop");
   const metrics: Array<{ icon: LucideIcon; value: string | number; label: string; detail: string }> = [
-    { icon: CircleDollarSign, value: formatCurrency(sales), label: "Gross sales", detail: `${ordersWithTotals.length} shop orders` },
-    { icon: CircleDollarSign, value: formatCurrency(deliveredSales), label: "Delivered sales", detail: `${deliveredOrders.length} delivered orders` },
+    { icon: CircleDollarSign, value: formatCurrency(sales), label: "Net sales", detail: `${ordersWithTotals.length} shop orders after refunds` },
+    { icon: CircleDollarSign, value: formatCurrency(deliveredSales), label: "Net delivered sales", detail: `${deliveredOrders.length} delivered orders` },
     { icon: ShoppingBag, value: orders.length, label: "Seller orders", detail: `${orders.filter((order) => orderStatus(order) === "processing").length} processing` },
     { icon: Box, value: productsSold, label: "Products sold", detail: `${products.length} active products` },
     { icon: BadgeDollarSign, value: formatCurrency(pendingPayout), label: "Pending payout", detail: "After fees" },
@@ -215,6 +224,24 @@ export function SellerDashboard({ shop, products, orders, payouts, earnings, ord
             <p className="mt-1 text-[11px] text-slate-400">{detail}</p>
           </div>
         ))}
+      </section>
+
+      <section className="mt-4 grid gap-3 sm:grid-cols-3">
+        <Link href="/seller/returns" className="surface p-4 transition hover:border-orange-300">
+          <p className="text-xs font-bold text-slate-500">Returns to respond</p>
+          <p className="mt-2 text-2xl font-black">{needsReturnResponse}</p>
+          <p className="mt-1 text-xs text-slate-400">48-hour response deadline</p>
+        </Link>
+        <Link href="/seller/returns" className="surface p-4 transition hover:border-orange-300">
+          <p className="text-xs font-bold text-slate-500">Open returns</p>
+          <p className="mt-2 text-2xl font-black">{openReturns}</p>
+          <p className="mt-1 text-xs text-slate-400">All active stages</p>
+        </Link>
+        <Link href="/seller/returns" className="surface p-4 transition hover:border-orange-300">
+          <p className="text-xs font-bold text-slate-500">Refunded last 30 days</p>
+          <p className="mt-2 text-2xl font-black">{formatCurrency(refundedLast30Days)}</p>
+          <p className="mt-1 text-xs text-slate-400">Completed return refunds</p>
+        </Link>
       </section>
 
       <section className="surface mt-4 grid gap-4 p-5 sm:grid-cols-3">

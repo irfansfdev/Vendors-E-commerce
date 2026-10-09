@@ -13,7 +13,7 @@ export default async function AdminRidersPage({ searchParams }: { searchParams: 
   const supabase = await createClient();
   const [{ data, error }, { data: assignmentRows }] = await Promise.all([
     supabase.from("delivery_profiles").select("*").order("created_at", { ascending: false }),
-    supabase.from("delivery_assignments").select("rider_id"),
+    supabase.from("delivery_assignments").select("rider_id").eq("assignment_type", "delivery"),
   ]);
   const assignments = new Map<string, number>();
   for (const row of assignmentRows ?? []) assignments.set(String(row.rider_id), (assignments.get(String(row.rider_id)) ?? 0) + 1);

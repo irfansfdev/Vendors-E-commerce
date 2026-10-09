@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 import {
   ArrowDownUp,
   BadgeCheck,
@@ -40,7 +41,6 @@ export function ShopStorefront({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [page, setPage] = useState(1);
   const [followed, setFollowed] = useState(() => {
     if (typeof window === "undefined") return false;
     return (
@@ -90,12 +90,8 @@ export function ShopStorefront({
             : Number(Boolean(b.badge)) - Number(Boolean(a.badge)),
     );
   }, [category, maxPrice, minPrice, products, query, sort]);
-  const pageSize = 12;
-  const pageCount = Math.max(1, Math.ceil(visibleProducts.length / pageSize));
-  const pagedProducts = visibleProducts.slice(
-    (page - 1) * pageSize,
-    page * pageSize,
-  );
+  const pagination = useUrlPagination(visibleProducts.length, 15);
+  const pagedProducts = visibleProducts.slice(pagination.from, pagination.to + 1);
   const reviewCount = products.reduce(
     (total, product) => total + Math.max(0, product.reviewsCount),
     0,
@@ -149,23 +145,23 @@ export function ShopStorefront({
     );
   }
   function changeQuery(value: string) {
-    setPage(1);
+    pagination.resetPage();
     setQuery(value);
   }
   function changeCategory(value: string) {
-    setPage(1);
+    pagination.resetPage();
     setCategory(value);
   }
   function changeMinPrice(value: string) {
-    setPage(1);
+    pagination.resetPage();
     setMinPrice(value);
   }
   function changeMaxPrice(value: string) {
-    setPage(1);
+    pagination.resetPage();
     setMaxPrice(value);
   }
   function changeSort(value: SortMode) {
-    setPage(1);
+    pagination.resetPage();
     setSort(value);
   }
 
@@ -418,38 +414,12 @@ export function ShopStorefront({
           {visibleProducts.length ? (
             <>
               <div
+                data-pagination-list
                 className={`mt-10 ${compact ? "[&>div]:gap-y-5 [&_article]:flex [&_article]:gap-4 [&_article>div:first-child]:w-32 [&_article>div:first-child]:shrink-0 [&_article>div:first-child]:rounded-2xl [&_article>div:last-child]:px-0 [&_article>div:last-child]:pt-1" : ""}`}
               >
                 <ProductGrid products={pagedProducts} columns={4} />
               </div>
-              {pageCount > 1 && (
-                <nav
-                  className="mt-10 flex items-center justify-center gap-3"
-                  aria-label="Shop product pages"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setPage((value) => Math.max(1, value - 1))}
-                    disabled={page === 1}
-                    className="button-secondary disabled:opacity-40"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-xs font-bold text-slate-500">
-                    Page {page} of {pageCount}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPage((value) => Math.min(pageCount, value + 1))
-                    }
-                    disabled={page === pageCount}
-                    className="button-secondary disabled:opacity-40"
-                  >
-                    Next
-                  </button>
-                </nav>
-              )}
+              <Pagination total={visibleProducts.length} page={pagination.page} pageSize={pagination.pageSize} totalPages={pagination.totalPages} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} />
             </>
           ) : (
             <div className="mt-10 rounded-3xl border border-dashed border-slate-300 bg-white p-16 text-center dark:border-white/15 dark:bg-white/[.03]">

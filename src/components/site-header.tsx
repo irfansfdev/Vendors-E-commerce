@@ -11,6 +11,7 @@ import {
   Menu,
   Moon,
   Package,
+  RotateCcw,
   Search,
   ShieldCheck,
   ShoppingCart,
@@ -274,6 +275,9 @@ export function SiteHeader({ user }: HeaderProps) {
                     <MenuLink href="/account/orders" icon={Package} onNavigate={() => setAccountOpen(false)}>
                       My orders
                     </MenuLink>
+                    <MenuLink href="/account/returns" icon={RotateCcw} onNavigate={() => setAccountOpen(false)}>
+                      My returns
+                    </MenuLink>
                     <MenuLink href="/wishlist" icon={Heart} onNavigate={() => setAccountOpen(false)}>
                       Wishlist
                     </MenuLink>
@@ -474,6 +478,9 @@ export function SiteHeader({ user }: HeaderProps) {
                 </DrawerLink>
                 <DrawerLink href="/account/orders" onNavigate={() => setMenuOpen(false)}>
                   My orders
+                </DrawerLink>
+                <DrawerLink href="/account/returns" onNavigate={() => setMenuOpen(false)}>
+                  My returns
                 </DrawerLink>
               </>
             )}

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteCategoryAction, saveCategoryAction } from "@/app/actions/admin";
+import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 
 type CategoryItem = {
   id: string;
@@ -54,6 +55,8 @@ export function CategoryManager({
       createdAt: String(c.created_at ?? c.createdAt ?? ""),
     })),
   );
+  const pagination = useUrlPagination(categories.length);
+  const visibleCategories = categories.slice(pagination.from, pagination.to + 1);
 
   // Sync state if initialCategories prop updates from server revalidation
   useEffect(() => {
@@ -481,7 +484,7 @@ export function CategoryManager({
       </section>}
 
       {/* Existing Categories Directory */}
-      {activeTab === "all" && <section className="surface overflow-hidden">
+      {activeTab === "all" && <section data-pagination-list className={`surface overflow-hidden transition-opacity ${pagination.isPending ? "pointer-events-none opacity-60" : ""}`}>
         <div className="flex items-center justify-between border-b border-slate-100 p-5 dark:border-slate-800">
           <div>
             <h2 className="font-semibold text-base">Category directory</h2>
@@ -506,7 +509,7 @@ export function CategoryManager({
               <span className="text-right">Actions</span>
             </div>
             <div className="min-w-[1120px] divide-y divide-slate-100 dark:divide-white/10">
-            {categories.map((category) => {
+            {visibleCategories.map((category) => {
               const isEditing = editingId === category.id;
               const displayImage =
                 category.image_url ||
@@ -709,6 +712,7 @@ export function CategoryManager({
             </div>
           </div>
         )}
+        <div className="px-5 pb-4"><Pagination total={categories.length} page={pagination.page} pageSize={pagination.pageSize} totalPages={pagination.totalPages} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} /></div>
       </section>}
     </div>
   );

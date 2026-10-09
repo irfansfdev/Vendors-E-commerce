@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Heart } from "lucide-react";
 import { ProductGrid } from "@/components/storefront-sections";
 import type { Product } from "@/lib/types";
+import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 
 export function WishlistPageContent({ products }: { products: Product[] }) {
   const [ids, setIds] = useState<string[] | null>(null);
@@ -26,6 +27,9 @@ export function WishlistPageContent({ products }: { products: Product[] }) {
       window.removeEventListener("vendra-wishlist-updated", loadSaved);
     };
   }, []);
+  const saved = ids === null ? [] : products.filter((product) => ids.includes(product.id));
+  const pagination = useUrlPagination(saved.length);
+  const visible = saved.slice(pagination.from, pagination.to + 1);
   if (ids === null)
     return (
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -37,7 +41,6 @@ export function WishlistPageContent({ products }: { products: Product[] }) {
         ))}
       </div>
     );
-  const saved = products.filter((product) => ids.includes(product.id));
   if (!saved.length)
     return (
       <div className="surface grid min-h-[420px] place-items-center p-8 text-center">
@@ -57,5 +60,5 @@ export function WishlistPageContent({ products }: { products: Product[] }) {
         </div>
       </div>
     );
-  return <ProductGrid products={saved} />;
+  return <div data-pagination-list className={`transition-opacity ${pagination.isPending ? "pointer-events-none opacity-60" : ""}`}><ProductGrid products={visible} /><Pagination total={saved.length} page={pagination.page} pageSize={pagination.pageSize} totalPages={pagination.totalPages} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} /></div>;
 }

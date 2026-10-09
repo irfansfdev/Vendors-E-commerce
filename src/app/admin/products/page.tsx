@@ -56,7 +56,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         </div>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Metric icon={Package} label="Total products" value={products.length} detail="All catalog products" />
         <Metric icon={Clock3} label="Pending requests" value={pending} detail="Waiting for review" tone="text-orange-600" />
         <Metric icon={Check} label="Published products" value={published} detail="Visible to customers" tone="text-emerald-600" />

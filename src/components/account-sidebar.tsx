@@ -3,6 +3,7 @@ import { ActiveNavLink } from "@/components/active-nav-link";
 const items = [
   ["Overview", "/account", "dashboard"],
   ["Orders", "/account/orders", "orders"],
+  ["Returns", "/account/returns", "returns"],
   ["Wishlist", "/wishlist", "wishlist"],
   ["Addresses", "/account/addresses", "addresses"],
 ] as const;

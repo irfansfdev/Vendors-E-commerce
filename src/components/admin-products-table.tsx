@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Archive, Check, ChevronLeft, ChevronRight, Edit3, Eye, Search, Store, X } from "lucide-react";
+import { Archive, Check, Edit3, Eye, Search, Store, X } from "lucide-react";
 import { ActionMenu } from "@/components/action-menu";
 import { toast } from "sonner";
 import { updateAdminFeaturedStatusAction, updateAdminProductStatusAction } from "@/app/actions/admin";
+import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 
 type Product = {
   id: string;
@@ -23,12 +24,10 @@ type Product = {
 };
 
 type Tab = "all" | "pending" | "published" | "draft" | "archived" | "featured";
-const pageSize = 8;
 
 export function AdminProductsTable({ products, initialTab = "all" }: { products: Product[]; initialTab?: Tab }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
   const [busy, setBusy] = useState<string | null>(null);
 
   const counts = {
@@ -50,13 +49,12 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
     [products, tab, query],
   );
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const pagination = useUrlPagination(filtered.length);
+  const visible = filtered.slice(pagination.from, pagination.to + 1);
 
   function selectTab(next: Tab) {
     setTab(next);
-    setPage(1);
+    pagination.resetPage();
   }
 
   async function changeStatus(product: Product, status: "published" | "draft" | "archived") {
@@ -92,7 +90,7 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
   }
 
   return (
-    <div className="space-y-5">
+    <div data-pagination-list className={`space-y-5 transition-opacity ${pagination.isPending ? "pointer-events-none opacity-60" : ""}`}>
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
         <div className="flex flex-wrap gap-2">
           {(["all", "pending", "published", "draft", "archived"] as Tab[]).map((item) => (
@@ -119,14 +117,14 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
-              setPage(1);
+              pagination.resetPage();
             }}
             placeholder="Search by shop or product"
             aria-label="Search products or shops"
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-10 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
           />
           {query && (
-            <button type="button" onClick={() => { setQuery(""); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500" aria-label="Clear search">
+            <button type="button" onClick={() => { setQuery(""); pagination.resetPage(); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500" aria-label="Clear search">
               <X className="size-4" />
             </button>
           )}
@@ -135,7 +133,7 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
 
       <div className="flex items-center justify-between text-xs text-slate-500">
         <span>
-          Showing {filtered.length ? (currentPage - 1) * pageSize + 1 : 0}-{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length} products
+          Showing {filtered.length ? pagination.from + 1 : 0}-{Math.min(pagination.to + 1, filtered.length)} of {filtered.length} products
         </span>
         {query && <span>Filtered results</span>}
       </div>
@@ -210,38 +208,7 @@ export function AdminProductsTable({ products, initialTab = "all" }: { products:
         )}
       </section>
 
-      {pageCount > 1 && (
-        <nav className="flex items-center justify-center gap-2" aria-label="Product pagination">
-          <button
-            type="button"
-            onClick={() => setPage((value) => Math.max(1, value - 1))}
-            disabled={currentPage === 1}
-            className="icon-button border border-slate-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10"
-            aria-label="Previous page"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-          {Array.from({ length: pageCount }, (_, index) => index + 1).map((number) => (
-            <button
-              type="button"
-              key={number}
-              onClick={() => setPage(number)}
-              className={`grid size-9 place-items-center rounded-lg text-xs font-black ${number === currentPage ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "text-slate-500 hover:bg-orange-50 hover:text-orange-600"}`}
-            >
-              {number}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
-            disabled={currentPage === pageCount}
-            className="icon-button border border-slate-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10"
-            aria-label="Next page"
-          >
-            <ChevronRight className="size-4" />
-          </button>
-        </nav>
-      )}
+      <Pagination total={filtered.length} page={pagination.page} pageSize={pagination.pageSize} totalPages={pagination.totalPages} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} />
     </div>
   );
 }

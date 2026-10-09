@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { getSellerContext } from "@/lib/seller";
 
 export type PublishProductInput = {
   shopId: string;
@@ -178,6 +179,7 @@ export async function updateProductAction(productId: string, formData: FormData)
   if (title.length < 2 || !description || !Number.isFinite(price) || price < 0) {
     return { success: false, error: "Please provide a valid title, description, and price." };
   }
+
   const supabase = await createClient();
   const { data: shop } = await supabase.from("shops").select("id").eq("owner_id", user.id).eq("status", "active").limit(1).maybeSingle();
   if (!shop?.id) return { success: false, error: "Seller shop not found." };
@@ -213,4 +215,23 @@ export async function updateProductAction(productId: string, formData: FormData)
   revalidatePath("/seller");
   revalidatePath("/seller/products");
   return { success: true };
+}
+
+export async function updateProductReturnableAction(formData: FormData) {
+  const { supabase, shop } = await getSellerContext();
+  const productId = String(formData.get("productId") ?? "");
+  const isReturnable = formData.get("isReturnable") === "on";
+  if (!productId) throw new Error("Product not found.");
+  const { data, error } = await supabase
+    .from("products")
+    .update({ is_returnable: isReturnable })
+    .eq("id", productId)
+    .eq("shop_id", String(shop.id))
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("This product could not be updated for your shop.");
+  revalidatePath("/seller/products");
+  revalidatePath(`/seller/products/${productId}/edit`);
+  revalidatePath("/account/orders");
 }

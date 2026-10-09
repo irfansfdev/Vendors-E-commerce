@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SellerDashboard } from "@/components/seller-dashboard";
 import { SellerOnboarding, ShopPendingNotice } from "@/components/seller-onboarding";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { getCurrentTimeMs } from "@/lib/returns/time";
 
 export const metadata: Metadata = { title: "Seller dashboard" };
 export const dynamic = "force-dynamic";
@@ -36,11 +37,12 @@ export default async function SellerPage({
   const shopId = String(shop.id);
   await supabase.rpc("refresh_payout_availability");
   await supabase.rpc("refresh_earnings_availability");
-  const [productsResult, ordersResult, payoutsResult, earningsResult] = await Promise.all([
+  const [productsResult, ordersResult, payoutsResult, earningsResult, returnsResult] = await Promise.all([
     supabase.from("products").select("*").eq("shop_id", shopId).order("created_at", { ascending: false }).limit(25),
     supabase.from("shop_orders").select("*").eq("shop_id", shopId).order("created_at", { ascending: false }).limit(25),
     supabase.from("payouts").select("*").eq("shop_id", shopId).order("created_at", { ascending: false }).limit(1000),
     supabase.from("shop_earnings").select("*").eq("shop_id", shopId).order("created_at", { ascending: false }).limit(1000),
+    supabase.from("return_requests").select("id,status,refund_amount,refunded_at,seller_response_due_at,shop_orders!inner(shop_id)").eq("shop_orders.shop_id", shopId),
   ]);
   const shopOrders = (ordersResult.data ?? []) as Record<string, unknown>[];
   const parentOrderIds = shopOrders.map((order) => String(order.parent_order_id ?? "")).filter(Boolean);
@@ -70,5 +72,6 @@ export default async function SellerPage({
   const { data: orderItems } = parentOrderIds.length
     ? await supabase.from("order_items").select("quantity, variant_id, shop_order_id, product_variants(id, product_id, price, stock_quantity, products(id, title, price))").in("shop_order_id", shopOrders.map((order) => String(order.id)))
     : { data: [] };
-  return <><div className="mx-auto max-w-[1440px] px-4 pt-6 sm:px-6 lg:px-8">{settings === "saved" && <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">Shop settings saved successfully.</p>}</div><SellerDashboard shop={shop} role={role} products={(productsResult.data ?? []) as Record<string, unknown>[]} orders={dashboardOrders} payouts={(payoutsResult.data ?? []) as Record<string, unknown>[]} earnings={(earningsResult.data ?? []) as Record<string, unknown>[]} orderItems={(orderItems ?? []) as Record<string, unknown>[]} /></>;
+  const now = getCurrentTimeMs();
+  return <><div className="mx-auto max-w-[1440px] px-4 pt-6 sm:px-6 lg:px-8">{settings === "saved" && <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">Shop settings saved successfully.</p>}</div><SellerDashboard shop={shop} role={role} asOfMs={now} products={(productsResult.data ?? []) as Record<string, unknown>[]} orders={dashboardOrders} payouts={(payoutsResult.data ?? []) as Record<string, unknown>[]} earnings={(earningsResult.data ?? []) as Record<string, unknown>[]} orderItems={(orderItems ?? []) as Record<string, unknown>[]} returns={(returnsResult.data ?? []) as Record<string, unknown>[]} /></>;
 }

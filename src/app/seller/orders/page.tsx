@@ -3,13 +3,19 @@ import Link from "next/link";
 import { ChevronLeft, ShoppingBag } from "lucide-react";
 import { getSellerContext } from "@/lib/seller";
 import { SellerOrdersTable } from "@/components/seller-orders-table";
+import { buildPaginationMeta, parsePagination } from "@/lib/pagination";
 
 export const metadata: Metadata = { title: "Orders | Seller" };
 export const dynamic = "force-dynamic";
 
-export default async function SellerOrdersPage() {
+export default async function SellerOrdersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { supabase, shop } = await getSellerContext();
-  const { data } = await supabase.from("shop_orders").select("*").eq("shop_id", String(shop.id)).order("created_at", { ascending: false });
+  const pagination = parsePagination(await searchParams);
+  let { data, count } = await supabase.from("shop_orders").select("*", { count: "exact" }).eq("shop_id", String(shop.id)).order("created_at", { ascending: false }).range(pagination.from, pagination.to);
+  const meta = buildPaginationMeta(count ?? 0, pagination.page, pagination.pageSize);
+  if ((count ?? 0) > 0 && meta.page !== pagination.page) {
+    ({ data, count } = await supabase.from("shop_orders").select("*", { count: "exact" }).eq("shop_id", String(shop.id)).order("created_at", { ascending: false }).range(meta.from, meta.to));
+  }
   const orders = (data ?? []) as Record<string, unknown>[];
   const orderIds = orders.map((order) => String(order.id));
   const parentOrderIds = orders.map((order) => String(order.parent_order_id ?? "")).filter(Boolean);
@@ -24,6 +30,14 @@ export default async function SellerOrdersPage() {
   const { data: items } = orderIds.length
     ? await supabase.from("order_items").select("shop_order_id, quantity, product_variants(price, products(title, price))").in("shop_order_id", orderIds)
     : { data: [] };
+  const { data: returnRequests } = orderIds.length
+    ? await supabase.from("return_requests").select("id,status,shop_order_id,refund_amount").in("shop_order_id", orderIds).order("requested_at", { ascending: false })
+    : { data: [] };
+  const returnsByOrder = new Map<string, Record<string, unknown>>();
+  for (const request of (returnRequests ?? []) as Record<string, unknown>[]) {
+    const orderId = String(request.shop_order_id);
+    if (!returnsByOrder.has(orderId)) returnsByOrder.set(orderId, request);
+  }
   const summaryByOrder = new Map<string, { total: number; names: string[] }>();
   for (const item of (items ?? []) as Record<string, any>[]) {
     const variant = item.product_variants ?? {};
@@ -33,6 +47,6 @@ export default async function SellerOrdersPage() {
     if (product.title) summary.names.push(String(product.title));
     summaryByOrder.set(String(item.shop_order_id), summary);
   }
-  const rows = orders.map((order) => { const summary = summaryByOrder.get(String(order.id)); const parent = parentById.get(String(order.parent_order_id ?? "")); const address = parent ? addressById.get(String(parent.shipping_address_id ?? "")) : undefined; const profile = parent ? profileById.get(String(parent.customer_id ?? "")) : undefined; const profileName = profile?.full_name ?? profile?.name ?? profile?.display_name ?? profile?.username ?? [profile?.first_name, profile?.last_name].filter(Boolean).join(" "); return { id: String(order.id), customer: String(address?.full_name ?? address?.name ?? profileName ?? parent?.customer_name ?? parent?.customer_email ?? order.customer_name ?? order.customer_email ?? order.customer_id ?? "Customer"), date: order.created_at ? new Date(String(order.created_at)).toLocaleDateString() : "-", items: summary?.names.length ?? 0, amount: summary?.total ?? Number(order.gross_amount ?? order.total_amount ?? order.subtotal ?? order.total ?? 0), payment: String(parent?.payment_method ?? order.payment_method ?? "cash_on_delivery"), status: String(order.order_status ?? order.status ?? "pending").toLowerCase() }; });
-  return <main className="mx-auto max-w-[1220px] px-4 py-8 sm:px-6 lg:px-8"><Link href="/seller" className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-orange-500"><ChevronLeft className="size-4" /> Dashboard</Link><div className="mb-8 mt-5"><p className="text-[11px] font-black uppercase tracking-[.18em] text-orange-500">Fulfillment</p><h1 className="mt-2 text-4xl font-black tracking-[-.055em]">Orders</h1><p className="mt-2 text-sm text-slate-500">Review customer orders and update delivery status.</p></div>{rows.length === 0 ? <section className="surface p-12 text-center"><ShoppingBag className="mx-auto size-10 text-slate-300" /><p className="mt-3 font-bold">No orders yet</p><p className="mt-1 text-sm text-slate-500">New orders will appear here automatically.</p></section> : <SellerOrdersTable orders={rows} />}</main>;
+  const rows = orders.map((order) => { const summary = summaryByOrder.get(String(order.id)); const parent = parentById.get(String(order.parent_order_id ?? "")); const address = parent ? addressById.get(String(parent.shipping_address_id ?? "")) : undefined; const profile = parent ? profileById.get(String(parent.customer_id ?? "")) : undefined; const profileName = profile?.full_name ?? profile?.name ?? profile?.display_name ?? profile?.username ?? [profile?.first_name, profile?.last_name].filter(Boolean).join(" "); const returnRequest = returnsByOrder.get(String(order.id)); return { id: String(order.id), customer: String(address?.full_name ?? address?.name ?? profileName ?? parent?.customer_name ?? parent?.customer_email ?? order.customer_name ?? order.customer_email ?? order.customer_id ?? "Customer"), date: order.created_at ? new Date(String(order.created_at)).toLocaleDateString() : "-", items: summary?.names.length ?? 0, amount: summary?.total ?? Number(order.gross_amount ?? order.total_amount ?? order.subtotal ?? order.total ?? 0), payment: String(parent?.payment_method ?? order.payment_method ?? "cash_on_delivery"), status: String(order.order_status ?? order.status ?? "pending").toLowerCase(), returnUrl: returnRequest ? `/seller/returns/${String(returnRequest.id)}` : "", returnStatus: String(returnRequest?.status ?? ""), refundAmount: Number(returnRequest?.refund_amount ?? 0) }; });
+  return <main className="mx-auto max-w-[1220px] px-4 py-8 sm:px-6 lg:px-8"><Link href="/seller" className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-orange-500"><ChevronLeft className="size-4" /> Dashboard</Link><div className="mb-8 mt-5"><p className="text-[11px] font-black uppercase tracking-[.18em] text-orange-500">Fulfillment</p><h1 className="mt-2 text-4xl font-black tracking-[-.055em]">Orders</h1><p className="mt-2 text-sm text-slate-500">Review customer orders and update delivery status.</p></div>{(count ?? 0) === 0 ? <section className="surface p-12 text-center"><ShoppingBag className="mx-auto size-10 text-slate-300" /><p className="mt-3 font-bold">No orders yet</p><p className="mt-1 text-sm text-slate-500">New orders will appear here automatically.</p></section> : <SellerOrdersTable orders={rows} total={count ?? 0} />}</main>;
 }

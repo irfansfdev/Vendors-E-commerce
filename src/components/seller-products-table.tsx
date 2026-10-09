@@ -1,22 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Edit3 } from "lucide-react";
+import { Edit3 } from "lucide-react";
 import { ActionMenu } from "@/components/action-menu";
 import { DeleteProductButton } from "@/components/delete-product-button";
+import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 
 type Product = { id: string; title: string; variantCount: number; price: number; stock: number; status: string; featured: boolean; createdAt: string; slug: string };
-const pageSize = 10;
-
-export function SellerProductsTable({ products, onDelete }: { products: Product[]; onDelete: (id: string) => Promise<unknown> }) {
-  const [page, setPage] = useState(1);
-  const pageCount = Math.max(1, Math.ceil(products.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const visible = useMemo(() => products.slice((currentPage - 1) * pageSize, currentPage * pageSize), [products, currentPage]);
+export function SellerProductsTable({ products, total, onDelete }: { products: Product[]; total?: number; onDelete: (id: string) => Promise<unknown> }) {
+  const pagination = useUrlPagination(total ?? products.length);
+  const visible = total === undefined ? products.slice(pagination.from, pagination.to + 1) : products;
+  const totalRows = total ?? products.length;
 
   return (
-    <section className="surface overflow-hidden">
+    <section data-pagination-list className={`surface overflow-hidden transition-opacity ${pagination.isPending ? "pointer-events-none opacity-60" : ""}`}>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="border-b border-slate-100 bg-slate-50/80 text-[10px] font-black uppercase tracking-[.1em] text-slate-400 dark:border-white/10 dark:bg-white/5">
@@ -38,7 +36,7 @@ export function SellerProductsTable({ products, onDelete }: { products: Product[
           </tbody>
         </table>
       </div>
-      {pageCount > 1 && <nav className="flex items-center justify-center gap-2 p-4" aria-label="Product pagination"><button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1} className="icon-button border border-slate-200 disabled:opacity-40 dark:border-white/10" aria-label="Previous page"><ChevronLeft className="size-4" /></button><span className="text-xs font-bold text-slate-500">Page {currentPage} of {pageCount}</span><button type="button" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={currentPage === pageCount} className="icon-button border border-slate-200 disabled:opacity-40 dark:border-white/10" aria-label="Next page"><ChevronRight className="size-4" /></button></nav>}
+      <div className="px-5 pb-4"><Pagination total={totalRows} page={pagination.page} pageSize={pagination.pageSize} totalPages={pagination.totalPages} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} /></div>
     </section>
   );
 }

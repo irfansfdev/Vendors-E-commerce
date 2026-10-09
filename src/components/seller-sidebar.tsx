@@ -7,6 +7,7 @@ const items = [
   { label: "Overview", href: "/seller", icon: "dashboard" as const },
   { label: "Products", href: "/seller/products", icon: "sellerProducts" as const },
   { label: "Orders", href: "/seller/orders", icon: "sellerOrders" as const },
+  { label: "Returns", href: "/seller/returns", icon: "returns" as const },
   { label: "Payouts", href: "/seller/payouts", icon: "sellerPayouts" as const },
   { label: "Settings", href: "/seller/settings", icon: "settings" as const },
 ];

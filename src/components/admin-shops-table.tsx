@@ -6,8 +6,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Check,
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   MoreHorizontal,
   Pause,
@@ -18,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { updateShopStatusAction } from "@/app/actions/admin";
+import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 
 type Shop = {
   id: string;
@@ -32,12 +31,10 @@ type Shop = {
   sales: number;
 };
 type Tab = "all" | "pending" | "active" | "suspended";
-const pageSize = 8;
 
 export function AdminShopsTable({ shops }: { shops: Shop[] }) {
   const [tab, setTab] = useState<Tab>("all");
   const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
   const [busy, setBusy] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const counts = {
@@ -58,13 +55,9 @@ export function AdminShopsTable({ shops }: { shops: Shop[] }) {
       ),
     [shops, tab, query],
   );
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const visible = filtered.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
-  const reset = () => setPage(1);
+  const pagination = useUrlPagination(filtered.length);
+  const visible = filtered.slice(pagination.from, pagination.to + 1);
+  const reset = pagination.resetPage;
 
   async function changeStatus(
     shop: Shop,
@@ -97,7 +90,7 @@ export function AdminShopsTable({ shops }: { shops: Shop[] }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div data-pagination-list className={`space-y-5 transition-opacity ${pagination.isPending ? "pointer-events-none opacity-60" : ""}`}>
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
         <div className="flex flex-wrap gap-2">
           {(["all", "pending", "active", "suspended"] as Tab[]).map((item) => (
@@ -144,8 +137,8 @@ export function AdminShopsTable({ shops }: { shops: Shop[] }) {
       </div>
       <div className="flex items-center justify-between text-xs text-slate-500">
         <span>
-          Showing {filtered.length ? (currentPage - 1) * pageSize + 1 : 0}-
-          {Math.min(currentPage * pageSize, filtered.length)} of{" "}
+          Showing {filtered.length ? pagination.from + 1 : 0}-
+          {Math.min(pagination.to + 1, filtered.length)} of{" "}
           {filtered.length} shops
         </span>
         {query && <span>Filtered results</span>}
@@ -213,43 +206,7 @@ export function AdminShopsTable({ shops }: { shops: Shop[] }) {
           </div>
         )}
       </section>
-      {pageCount > 1 && (
-        <nav
-          className="flex items-center justify-center gap-2"
-          aria-label="Shop pagination"
-        >
-          <button
-            type="button"
-            disabled={currentPage === 1}
-            onClick={() => setPage((value) => Math.max(1, value - 1))}
-            className="icon-button border border-slate-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10"
-            aria-label="Previous page"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-          {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-            (number) => (
-              <button
-                type="button"
-                key={number}
-                onClick={() => setPage(number)}
-                className={`grid size-9 place-items-center rounded-lg text-xs font-black ${number === currentPage ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "text-slate-500 hover:bg-orange-50 hover:text-orange-600"}`}
-              >
-                {number}
-              </button>
-            ),
-          )}
-          <button
-            type="button"
-            disabled={currentPage === pageCount}
-            onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
-            className="icon-button border border-slate-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10"
-            aria-label="Next page"
-          >
-            <ChevronRight className="size-4" />
-          </button>
-        </nav>
-      )}
+      <Pagination total={filtered.length} page={pagination.page} pageSize={pagination.pageSize} totalPages={pagination.totalPages} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} />
     </div>
   );
 }

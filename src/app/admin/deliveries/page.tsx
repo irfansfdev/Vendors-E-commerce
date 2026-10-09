@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { AdminDeliveryQueueTable, type DeliveryQueueRow } from "@/components/admin-delivery-queue-table";
+import { AdminReturnPickupQueue } from "@/components/admin-return-pickup-queue";
 import { createClient } from "@/lib/supabase/server";
+import { buildPaginationMeta, parsePagination } from "@/lib/pagination";
 
 export const metadata: Metadata = { title: "Delivery queue | BabulShop" };
 export const dynamic = "force-dynamic";
@@ -26,10 +28,17 @@ function locationAge(updatedAt: unknown) {
 }
 function text(row: Row, ...keys: string[]) { return String(keys.map((key) => row[key]).find((value) => value !== null && value !== undefined && value !== "") ?? ""); }
 
-export default async function AdminDeliveriesPage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string }> }) {
-  const { error: assignmentError, success } = await searchParams;
+export default async function AdminDeliveriesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams;
+  const assignmentError = typeof params.error === "string" ? params.error : undefined;
+  const success = typeof params.success === "string" ? params.success : undefined;
+  const pagination = parsePagination(params);
   const supabase = await createClient();
-  const { data: shopOrders, error } = await supabase.from("shop_orders").select("*").eq("order_status", "ready_for_pickup").order("created_at", { ascending: true });
+  let { data: shopOrders, error, count: totalReadyOrders } = await supabase.from("shop_orders").select("*", { count: "exact" }).eq("order_status", "ready_for_pickup").order("created_at", { ascending: true }).range(pagination.from, pagination.to);
+  const deliveryMeta = buildPaginationMeta(totalReadyOrders ?? 0, pagination.page, pagination.pageSize);
+  if ((totalReadyOrders ?? 0) > 0 && deliveryMeta.page !== pagination.page) {
+    ({ data: shopOrders, error, count: totalReadyOrders } = await supabase.from("shop_orders").select("*", { count: "exact" }).eq("order_status", "ready_for_pickup").order("created_at", { ascending: true }).range(deliveryMeta.from, deliveryMeta.to));
+  }
   const orders = (shopOrders ?? []) as Row[];
   const shopIds = [...new Set(orders.map((order) => text(order, "shop_id")).filter(Boolean))];
   const parentIds = [...new Set(orders.map((order) => text(order, "parent_order_id")).filter(Boolean))];
@@ -38,7 +47,7 @@ export default async function AdminDeliveriesPage({ searchParams }: { searchPara
     shopIds.length ? supabase.from("shops").select("*").in("id", shopIds) : Promise.resolve({ data: [] }),
     parentIds.length ? supabase.from("orders").select("*").in("id", parentIds) : Promise.resolve({ data: [] }),
     supabase.from("delivery_profiles").select("*").eq("status", "approved").neq("availability_status", "offline").order("full_name"),
-    supabase.from("delivery_assignments").select("shop_order_id, rider_id, status").in("status", ["assigned", "accepted", "picked_up", "out_for_delivery"]),
+    supabase.from("delivery_assignments").select("shop_order_id, return_request_id, assignment_type, rider_id, status").in("status", ["assigned", "accepted", "picked_up", "out_for_delivery"]),
     orderIds.length ? supabase.from("order_items").select("shop_order_id, quantity, product_variants(price, products(price))").in("shop_order_id", orderIds) : Promise.resolve({ data: [] }),
   ]);
   const shopById = new Map((shops ?? []).map((row) => [String(row.id), row as Row]));
@@ -53,14 +62,52 @@ export default async function AdminDeliveriesPage({ searchParams }: { searchPara
   const customerIds = [...new Set((parents ?? []).map((parent) => text(parent as Row, "customer_id", "user_id")).filter(Boolean))];
   const addressIds = [...new Set((parents ?? []).map((parent) => text(parent as Row, "shipping_address_id")).filter(Boolean))];
   const [{ data: profiles }, { data: addresses }] = await Promise.all([
-    customerIds.length ? supabase.from("profiles").select("id, full_name, name, display_name, first_name, last_name").in("id", customerIds) : Promise.resolve({ data: [] }),
-    addressIds.length ? supabase.from("addresses").select("id, full_name, name, address_line1, address_line_1, city").in("id", addressIds) : Promise.resolve({ data: [] }),
+    customerIds.length ? supabase.from("profiles").select("id,full_name").in("id", customerIds) : Promise.resolve({ data: [] }),
+    addressIds.length ? supabase.from("addresses").select("id,full_name,address_line1,address_line_1,city").in("id", addressIds) : Promise.resolve({ data: [] }),
   ]);
   const profileById = new Map((profiles ?? []).map((profile) => [String(profile.id), profile as Row]));
   const addressById = new Map((addresses ?? []).map((address) => [String(address.id), address as Row]));
   const activeByRider = new Map<string, number>();
   const assignedOrderIds = new Set<string>();
-  for (const assignment of assignments ?? []) { activeByRider.set(String(assignment.rider_id), (activeByRider.get(String(assignment.rider_id)) ?? 0) + 1); assignedOrderIds.add(String(assignment.shop_order_id)); }
+  for (const assignment of assignments ?? []) {
+    activeByRider.set(String(assignment.rider_id), (activeByRider.get(String(assignment.rider_id)) ?? 0) + 1);
+    if (assignment.assignment_type === "delivery" && assignment.shop_order_id) assignedOrderIds.add(String(assignment.shop_order_id));
+  }
+  const { data: returnRequests, error: returnsError } = await supabase.from("return_requests")
+    .select("id,status,requested_at,shop_order_id,shop_orders!inner(shop_id),return_items(quantity,order_items(product_variants(products(title))))")
+    .in("status", ["approved", "pickup_assigned"])
+    .order("requested_at", { ascending: false });
+  const requestRows = (returnRequests ?? []) as Row[];
+  const requestIds = requestRows.map((request) => text(request, "id"));
+  const [{ data: returnAssignments }, { data: returnShops }] = await Promise.all([
+    requestIds.length ? supabase.from("delivery_assignments").select("return_request_id,status").eq("assignment_type", "return_pickup").in("return_request_id", requestIds) : Promise.resolve({ data: [] }),
+    [...new Set(requestRows.map((request) => text(request.shop_orders as Row, "shop_id")).filter(Boolean))].length
+      ? supabase.from("shops").select("id,name").in("id", [...new Set(requestRows.map((request) => text(request.shop_orders as Row, "shop_id")).filter(Boolean))])
+      : Promise.resolve({ data: [] }),
+  ]);
+  const shopNames = new Map((returnShops ?? []).map((shop) => [String(shop.id), String(shop.name ?? "Shop")]));
+  const assignmentByRequest = new Map((returnAssignments ?? []).map((assignment) => [String(assignment.return_request_id), String(assignment.status)]));
+  const returnPickupRows = requestRows.filter((request) => !["assigned", "accepted", "picked_up", "out_for_delivery"].includes(assignmentByRequest.get(text(request, "id")) ?? ""))
+    .map((request) => {
+      const shopId = text(request.shop_orders as Row, "shop_id");
+      const eligibleRiders = (riders ?? []).map((rider) => rider as Row)
+        .filter((rider) => text(rider, "availability_status") === "available")
+        .map((rider) => {
+          const active = activeByRider.get(text(rider, "id")) ?? 0;
+          const capacity = Number(rider.max_active_deliveries ?? 2);
+          return { rider, active, capacity };
+        })
+        .filter((entry) => entry.active < entry.capacity)
+        .sort((a, b) => a.active - b.active)
+        .map(({ rider, active, capacity }) => ({ id: text(rider, "id"), name: text(rider, "full_name") || "Rider", phone: text(rider, "phone"), active, capacity }));
+      const returnItems = ((request.return_items ?? []) as Row[]).map((item) => {
+        const orderItem = Array.isArray(item.order_items) ? item.order_items[0] : item.order_items;
+        const variant = orderItem?.product_variants;
+        const product = Array.isArray(variant) ? variant[0]?.products : variant?.products;
+        return String(product?.title ?? "Item");
+      });
+      return { id: text(request, "id"), orderId: text(request, "shop_order_id"), status: text(request, "status"), requestedAt: text(request, "requested_at"), shopName: shopNames.get(shopId) ?? "Shop", items: returnItems, riders: eligibleRiders };
+    });
   const rows: DeliveryQueueRow[] = [];
   for (const order of orders) {
     if (assignedOrderIds.has(text(order, "id"))) continue;
@@ -68,8 +115,7 @@ export default async function AdminDeliveriesPage({ searchParams }: { searchPara
     const parent = parentById.get(text(order, "parent_order_id")) ?? {};
     const profile = profileById.get(text(parent, "customer_id", "user_id")) ?? {};
     const address = addressById.get(text(parent, "shipping_address_id")) ?? {};
-    const profileName = [profile.first_name, profile.last_name].filter(Boolean).join(" ");
-    const customerName = text(address, "full_name", "name") || text(parent, "customer_name", "full_name") || text(profile, "full_name", "name", "display_name") || profileName || "Customer";
+    const customerName = text(address, "full_name") || text(parent, "customer_name", "full_name") || text(profile, "full_name") || "Customer";
     const amount = Number(order.gross_amount ?? order.total_amount ?? order.subtotal ?? 0) || itemTotalByOrder.get(text(order, "id")) || 0;
     const pickupLat = coordinate(shop, "pickup_latitude", "latitude", "lat");
     const pickupLng = coordinate(shop, "pickup_longitude", "longitude", "lng", "lon");
@@ -90,5 +136,5 @@ export default async function AdminDeliveriesPage({ searchParams }: { searchPara
     }
   }
   rows.sort((a, b) => Number(b.recommended) - Number(a.recommended));
-  return <div className="mx-auto max-w-7xl p-5 sm:p-8 lg:p-10"><header className="mb-8"><p className="text-[11px] font-black uppercase tracking-[.18em] text-orange-500">Logistics control</p><h1 className="page-title mt-2">Ready for Pickup / Assign Rider</h1><p className="mt-2 text-sm text-slate-500">Each ready shop order is listed independently. Rider distances use stored GPS coordinates only.</p></header>{error ? <section className="surface p-6 text-sm text-rose-600">Could not load the delivery queue: {error.message}</section> : <AdminDeliveryQueueTable rows={rows} error={assignmentError} success={success} />}</div>;
+  return <div className="mx-auto max-w-7xl p-5 sm:p-8 lg:p-10"><header className="mb-8"><p className="text-[11px] font-black uppercase tracking-[.18em] text-orange-500">Logistics control</p><h1 className="page-title mt-2">Ready for Pickup / Assign Rider</h1><p className="mt-2 text-sm text-slate-500">Each ready shop order is listed independently. Rider distances use stored GPS coordinates only.</p></header>{error ? <section className="surface p-6 text-sm text-rose-600">Could not load the delivery queue: {error.message}</section> : <AdminDeliveryQueueTable rows={rows} total={totalReadyOrders ?? 0} error={assignmentError} success={success} />}{returnsError ? <section className="surface mt-7 p-5 text-sm text-rose-600">Could not load return pickups: {returnsError.message}</section> : <AdminReturnPickupQueue returns={returnPickupRows} />}</div>;
 }
