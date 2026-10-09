@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronUp, Clock3, History } from "lucide-react";
+import { Clock3, History } from "lucide-react";
 import { ReturnStatusBadge } from "@/components/return-status-badge";
+import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 
 type TimelineEvent = {
   id: string;
@@ -74,12 +74,18 @@ export function ReturnTimeline({
   title?: string;
   emptyMessage?: string;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const visibleEvents = expanded ? events : events.slice(-3);
-  const hiddenCount = events.length - visibleEvents.length;
+  const pagination = useUrlPagination(events.length);
+  const visibleEvents = [...events]
+    .reverse()
+    .slice(pagination.from, pagination.to + 1)
+    .reverse();
+  const latestEventId = events.at(-1)?.id;
 
   return (
-    <section className="surface overflow-hidden">
+    <section
+      data-pagination-list
+      className={`surface overflow-hidden transition-opacity ${pagination.isPending ? "pointer-events-none opacity-60" : ""}`}
+    >
       <header className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-white/10 sm:px-6 sm:py-5">
         <div className="flex min-w-0 items-center gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-orange-100 to-amber-50 text-orange-600 ring-1 ring-orange-200/70 dark:from-orange-500/15 dark:to-amber-500/5 dark:text-orange-300 dark:ring-orange-400/20">
@@ -101,18 +107,6 @@ export function ReturnTimeline({
         </p>
       ) : (
         <>
-          {!expanded && hiddenCount > 0 && (
-            <div className="px-5 pt-4 sm:px-6">
-              <button
-                type="button"
-                onClick={() => setExpanded(true)}
-                className="inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 dark:hover:bg-white/5 dark:hover:text-orange-300"
-              >
-                <ChevronDown className="size-4" />
-                Show {hiddenCount} earlier {hiddenCount === 1 ? "update" : "updates"}
-              </button>
-            </div>
-          )}
           <ol className="px-5 py-4 sm:px-6">
           {visibleEvents.map((event, index) => (
             <li key={event.id} className="relative flex gap-3 pb-2.5 last:pb-0 sm:gap-3.5">
@@ -123,14 +117,14 @@ export function ReturnTimeline({
                 />
               )}
               <span className={`relative z-10 mt-1 grid size-6 shrink-0 place-items-center rounded-full border bg-white dark:bg-[#111827] sm:size-7 ${
-                index === visibleEvents.length - 1
+                event.id === latestEventId
                   ? "border-orange-300 dark:border-orange-400/50"
                   : "border-slate-200 dark:border-white/15"
               }`}>
-                <span className={`size-1.5 rounded-full ${index === visibleEvents.length - 1 && !expanded ? "bg-orange-500" : "bg-slate-300 dark:bg-slate-600"}`} />
+                <span className={`size-1.5 rounded-full ${event.id === latestEventId ? "bg-orange-500" : "bg-slate-300 dark:bg-slate-600"}`} />
               </span>
               <article className={`min-w-0 flex-1 rounded-xl border px-3 py-2.5 transition-colors sm:px-3.5 ${
-                index === visibleEvents.length - 1
+                event.id === latestEventId
                   ? "border-orange-200/80 bg-orange-50/50 dark:border-orange-400/20 dark:bg-orange-500/[.04]"
                   : "border-slate-200/80 bg-white dark:border-white/10 dark:bg-white/[.025]"
               }`}>
@@ -139,7 +133,7 @@ export function ReturnTimeline({
                     <h3 className="break-words text-xs font-black leading-5 text-slate-900 dark:text-white sm:text-sm">
                       {eventTitle(event)}
                     </h3>
-                    {index === visibleEvents.length - 1 && (
+                    {event.id === latestEventId && (
                       <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[.08em] text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
                         Latest
                       </span>
@@ -171,18 +165,16 @@ export function ReturnTimeline({
             </li>
           ))}
           </ol>
-          {expanded && events.length > 3 && (
-            <div className="border-t border-slate-100 px-5 py-3 dark:border-white/10 sm:px-6">
-              <button
-                type="button"
-                onClick={() => setExpanded(false)}
-                className="inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 dark:hover:bg-white/5 dark:hover:text-orange-300"
-              >
-                <ChevronUp className="size-4" />
-                Show recent updates
-              </button>
-            </div>
-          )}
+          <div className="px-5 pb-4 sm:px-6">
+            <Pagination
+              total={events.length}
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              totalPages={pagination.totalPages}
+              onPageChange={pagination.setPage}
+              onPageSizeChange={pagination.setPageSize}
+            />
+          </div>
         </>
       )}
     </section>
