@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowUpRight, BadgeDollarSign, Boxes, CircleDollarSign, ShoppingBag, Store, UsersRound } from "lucide-react";
+import { ArrowUpRight, BadgeDollarSign, Bike, CircleDollarSign, Package, ShoppingBag, Sparkles, Store } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { formatCurrency } from "@/lib/utils";
+import { CompactPanel } from "@/components/shared/compact-panel";
+import { formatMoney, StatCard } from "@/components/shared/stat-card";
+import { AdminRequestLinks } from "@/components/shared/admin-request-links";
 import { DashboardAnalyticsHub } from "@/components/shared/dashboard-analytics-hub";
 import { getCurrentTimeMs } from "@/lib/returns/time";
 import { AdminPendingShopActions } from "@/components/admin/shops/admin-pending-shop-actions";
@@ -40,7 +42,7 @@ function monthlySales(rows: Row[]) {
 export default async function AdminPage() {
   const supabase = await createClient();
   await supabase.rpc("refresh_payout_availability");
-  const [ordersResult, shopsResult, profilesResult, categoriesResult, shopOrdersResult, transactionsResult, payoutsResult, pendingResult, returnsResult] = await Promise.all([
+  const [ordersResult, shopsResult, profilesResult, categoriesResult, shopOrdersResult, transactionsResult, payoutsResult, pendingResult, returnsResult, pendingProductsResult, pendingFeaturedResult, pendingRidersResult] = await Promise.all([
     supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(1000),
     supabase.from("shops").select("id, name, status, commission_rate"),
     supabase.from("profiles").select("id", { count: "exact", head: true }),
@@ -50,6 +52,9 @@ export default async function AdminPage() {
     supabase.from("payouts").select("amount,net_amount,status").limit(2000),
     supabase.from("shops").select("id,name,slug,created_at", { count: "exact" }).eq("status", "pending").order("created_at", { ascending: false }).limit(6),
     supabase.from("return_requests").select("id,shop_order_id,status,refund_amount,refunded_at,seller_response_due_at,shop_orders!inner(shop_id)").order("requested_at", { ascending: false }).limit(5000),
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("featured_status", "pending"),
+    supabase.from("delivery_profiles").select("id", { count: "exact", head: true }).eq("status", "pending"),
   ]);
   const orders = (ordersResult.data ?? []) as Row[];
   const allShops = (shopsResult.data ?? []) as Row[];
@@ -67,7 +72,6 @@ export default async function AdminPage() {
   const cancelled = revenueRows.filter((row) => ["cancelled", "refunded", "failed"].includes(status(row)));
 
   const sales = revenueRows.filter(isRevenue).reduce((sum, row) => sum + amount(row), 0);
-  const deliveredSales = delivered.reduce((sum, row) => sum + amount(row), 0);
   const nowMs = getCurrentTimeMs();
   const thirtyDaysAgo = nowMs - 30 * 24 * 60 * 60 * 1000;
   const recentPricingOrders = shopOrders.filter((row) => {
@@ -212,24 +216,38 @@ export default async function AdminPage() {
   const fulfillmentPct = Math.round((delivered.length / totalOrdersCount) * 100);
 
   const pendingShops = (pendingResult.data ?? []) as Row[];
-  const metrics = [
-    { icon: CircleDollarSign, label: "Total sales", value: formatCurrency(sales), detail: `${revenueRows.filter(isRevenue).length} paid or delivered orders`, tone: "text-slate-950 dark:text-white" },
-    { icon: BadgeDollarSign, label: "Platform earnings", value: formatCurrency(commission), detail: "Commission collected", tone: "text-emerald-600" },
-    { icon: ShoppingBag, label: "Delivered orders", value: delivered.length, detail: `${formatCurrency(deliveredSales)} delivered volume`, tone: "text-slate-950 dark:text-white" },
-    { icon: Store, label: "Active shops", value: activeShops.length, detail: "Currently selling", tone: "text-slate-950 dark:text-white" },
+  const requestLinks = [
+    { label: "Shops", href: "/admin/shops?status=pending", count: pendingResult.count, icon: Store, countError: pendingResult.error?.message },
+    { label: "Products", href: "/admin/products?status=pending", count: pendingProductsResult.count, icon: Package, countError: pendingProductsResult.error?.message },
+    { label: "Featured", href: "/admin/products?status=featured", count: pendingFeaturedResult.count, icon: Sparkles, countError: pendingFeaturedResult.error?.message },
+    { label: "Riders", href: "/admin/riders", count: pendingRidersResult.count, icon: Bike, countError: pendingRidersResult.error?.message },
   ];
-
-  return <div className="mx-auto max-w-[1440px] px-5 py-7 sm:px-8 lg:px-10"><header className="mb-9 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-[11px] font-black uppercase tracking-[.18em] text-orange-500">BabulShop control room</p><h1 className="page-title mt-2">Platform overview</h1><p className="mt-3 max-w-xl text-sm leading-6 text-slate-500">Keep track of marketplace sales, payouts, shops and customer activity from one place.</p></div><Link href="/admin/shops?status=pending" className="button-primary bg-orange-500 hover:bg-orange-600">Review shop requests <ArrowUpRight className="size-4" /></Link></header>
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(({ icon: Icon, label, value, detail, tone }) => <div key={label} className="surface relative overflow-hidden p-5 sm:p-6"><div className="flex items-start justify-between"><span className="grid size-11 place-items-center rounded-2xl bg-orange-50 text-orange-500 dark:bg-orange-500/10"><Icon className="size-5" /></span><span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-black uppercase tracking-[.12em] text-emerald-600 dark:bg-emerald-500/10">Live</span></div><p className="mt-6 text-xs font-bold text-slate-500">{label}</p><p className={`mt-1 text-2xl font-black tracking-[-.04em] ${tone}`}>{value}</p><p className="mt-1 text-[11px] text-slate-400">{detail}</p></div>)}</section>
-    <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <Link href="/admin/returns" className="surface p-4 transition hover:border-orange-300"><p className="text-xs font-bold text-slate-500">Open returns</p><p className="mt-2 text-2xl font-black">{openReturns.length}</p><p className="mt-1 text-xs text-slate-400">All active stages</p></Link>
-      <Link href="/admin/returns" className="surface p-4 transition hover:border-orange-300"><p className="text-xs font-bold text-slate-500">Needs attention</p><p className="mt-2 text-2xl font-black">{needsReturnAttention.length}</p><p className="mt-1 text-xs text-slate-400">Overdue, escalated, or failed inspection</p></Link>
-      <Link href="/admin/returns" className="surface p-4 transition hover:border-orange-300"><p className="text-xs font-bold text-slate-500">Refunds pending</p><p className="mt-2 text-2xl font-black">{formatCurrency(refundsPending)}</p><p className="mt-1 text-xs text-slate-400">Awaiting refund processing</p></Link>
-      <Link href="/admin/returns" className="surface p-4 transition hover:border-orange-300"><p className="text-xs font-bold text-slate-500">Refunded this month</p><p className="mt-2 text-2xl font-black">{formatCurrency(refundedThisMonth)}</p><p className="mt-1 text-xs text-slate-400">Completed customer refunds</p></Link>
+  return <div className="mx-auto max-w-[1440px] px-5 py-7 sm:px-8 lg:px-10"><header className="mb-9 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-[11px] font-black uppercase tracking-[.18em] text-orange-500">BabulShop control room</p><h1 className="page-title mt-2">Platform overview</h1><p className="mt-3 max-w-xl text-sm leading-6 text-slate-500">Keep track of marketplace sales, payouts, shops and customer activity from one place.</p></div><AdminRequestLinks requests={requestLinks} /></header>
+    <section aria-label="Marketplace metrics" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <StatCard label="Total sales" value={formatMoney(sales)} exactValue={sales} subtitle={`${revenueRows.filter(isRevenue).length.toLocaleString("en-US")} paid or delivered orders`} icon={CircleDollarSign} href="/admin/orders" />
+      <StatCard label="Platform earnings" value={formatMoney(commission)} exactValue={commission} subtitle="Commission collected" icon={BadgeDollarSign} href="/admin/payouts" valueClassName="text-emerald-600 dark:text-emerald-400" />
+      <StatCard label="Delivered orders" value={delivered.length.toLocaleString("en-US")} icon={ShoppingBag} href="/admin/orders" />
+      <StatCard label="Active shops" value={activeShops.length.toLocaleString("en-US")} subtitle="Currently selling" icon={Store} href="/admin/shops" />
     </section>
-    <section className="mt-4 grid gap-3 sm:grid-cols-2">
-      <Link href="/admin/coupons" className="surface p-4 transition hover:border-orange-300"><p className="text-xs font-bold text-slate-500">Coupon discounts given (30 days)</p><p className="mt-2 text-2xl font-black">{formatCurrency(couponDiscounts30d)}</p><p className="mt-1 text-xs text-slate-400">Platform-funded coupon and delivery discounts</p></Link>
-      <Link href="/admin/settings" className="surface p-4 transition hover:border-orange-300"><p className="text-xs font-bold text-slate-500">Delivery fees collected (30 days)</p><p className="mt-2 text-2xl font-black">{formatCurrency(deliveryFees30d)}</p><p className="mt-1 text-xs text-slate-400">Delivery fees charged after delivery discounts</p></Link>
+    <section aria-label="Returns and financial summary" className="mt-4 grid gap-4 pb-2 md:grid-cols-2">
+      <CompactPanel
+        title="Returns and refunds"
+        actionHref="/admin/returns"
+        actionLabel="View returns"
+        rows={[
+          { label: "Open returns", value: openReturns.length.toLocaleString("en-US") },
+          { label: "Needs attention", value: needsReturnAttention.length.toLocaleString("en-US"), attention: needsReturnAttention.length > 0 },
+          { label: "Refunds pending", value: formatMoney(refundsPending), exactValue: refundsPending },
+          { label: "Refunded this month", value: formatMoney(refundedThisMonth), exactValue: refundedThisMonth },
+        ]}
+      />
+      <CompactPanel
+        title="Money this month (30 days)"
+        rows={[
+          { label: "Coupon discounts given", value: formatMoney(couponDiscounts30d), helper: "Funded by BabulShop", exactValue: couponDiscounts30d },
+          { label: "Delivery fees collected", value: formatMoney(deliveryFees30d), helper: "After delivery discounts", exactValue: deliveryFees30d },
+        ]}
+      />
     </section>
     {returnsResult.error ? <section className="surface mt-4 p-4 text-sm text-rose-600">Could not load return metrics: {returnsResult.error.message}</section> : <section className="surface mt-4 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5 dark:border-white/10"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Marketplace health</p><h2 className="mt-1 text-lg font-black">Shops with highest return rate</h2></div><Link href="/admin/returns" className="text-xs font-bold text-orange-500">Review returns</Link></div>

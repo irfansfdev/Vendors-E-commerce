@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { BadgeDollarSign, Bike, Box, Boxes, ClipboardList, CreditCard, Heart, LayoutDashboard, MapPin, RotateCcw, Settings, ShoppingBag, Star, Store, TicketPercent, UserRound } from "lucide-react";
 
@@ -25,6 +26,7 @@ const icons = {
   returnPickups: RotateCcw,
   coupons: TicketPercent,
 } as const;
+const EMPTY_BADGE_ITEMS: string[] = [];
 
 export function ActiveNavLink({
   href,
@@ -33,6 +35,8 @@ export function ActiveNavLink({
   exact = false,
   compact = false,
   badge,
+  badgeStorageKey,
+  badgeItems,
 }: {
   href: string;
   label: string;
@@ -40,6 +44,8 @@ export function ActiveNavLink({
   exact?: boolean;
   compact?: boolean;
   badge?: number;
+  badgeStorageKey?: string;
+  badgeItems?: string[];
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -48,6 +54,67 @@ export function ActiveNavLink({
   const active = (exact ? pathname === path : pathname === path || pathname.startsWith(`${path}/`))
     && (queryMatches || (!query && !searchParams.has("type")));
   const IconComponent = icons[icon];
+  const storageKey = badgeStorageKey ? `babulshop:sidebar-seen:${badgeStorageKey}:${path}` : null;
+  const currentItemsSnapshot = JSON.stringify(badgeItems ?? []);
+  const subscribe = useCallback((callback: () => void) => {
+    window.addEventListener("storage", callback);
+    window.addEventListener("babulshop:sidebar-seen", callback);
+    return () => {
+      window.removeEventListener("storage", callback);
+      window.removeEventListener("babulshop:sidebar-seen", callback);
+    };
+  }, []);
+  const getSeenSnapshot = useCallback(() => {
+    return storageKey ? window.localStorage.getItem(storageKey) ?? "{}" : "{}";
+  }, [storageKey]);
+  const seenSnapshot = useSyncExternalStore(subscribe, getSeenSnapshot, () => "{}");
+  const savedState = useMemo(() => {
+    try {
+      const saved = JSON.parse(seenSnapshot) as { count?: unknown; items?: unknown };
+      return {
+        count: typeof saved.count === "number" && Number.isFinite(saved.count) ? Math.max(0, saved.count) : 0,
+        items: Array.isArray(saved.items) ? saved.items.filter((item): item is string => typeof item === "string") : [],
+      };
+    } catch {
+      return { count: 0, items: [] as string[] };
+    }
+  }, [seenSnapshot]);
+  const seenCount = savedState.count;
+  const seenItems = savedState.items;
+  const currentCount = Math.max(0, badge ?? 0);
+  const currentItems = badgeItems ?? EMPTY_BADGE_ITEMS;
+  const currentItemsSet = useMemo(() => new Set(currentItems), [currentItems]);
+
+  useEffect(() => {
+    if (!storageKey) return;
+    if (active) {
+      window.localStorage.setItem(storageKey, JSON.stringify({ count: currentCount, items: badgeItems ?? null }));
+      window.dispatchEvent(new Event("babulshop:sidebar-seen"));
+      return;
+    }
+
+    if (badgeItems !== undefined) {
+      const retainedItems = seenItems.filter((item) => currentItemsSet.has(item));
+      if (retainedItems.length !== seenItems.length) {
+        window.localStorage.setItem(storageKey, JSON.stringify({ count: currentCount, items: retainedItems }));
+        window.dispatchEvent(new Event("babulshop:sidebar-seen"));
+      }
+      return;
+    }
+
+    const adjustedSeenCount = Math.min(seenCount, currentCount);
+    if (adjustedSeenCount !== seenCount) {
+      window.localStorage.setItem(storageKey, JSON.stringify({ count: adjustedSeenCount, items: null }));
+      window.dispatchEvent(new Event("babulshop:sidebar-seen"));
+    }
+  }, [active, badgeItems, currentCount, currentItemsSet, currentItemsSnapshot, seenCount, seenItems, storageKey]);
+  const seenItemsSet = new Set(seenItems);
+  const unreadCount = badgeItems === undefined
+    ? Math.max(0, currentCount - Math.min(seenCount, currentCount))
+    : currentItems.filter((item) => !seenItemsSet.has(item)).length;
+  const visibleBadge = active ? undefined : badgeStorageKey
+    ? unreadCount > 0 ? unreadCount : undefined
+    : badge;
 
   return (
     <Link
@@ -61,7 +128,7 @@ export function ActiveNavLink({
     >
       <IconComponent className="size-4" />
       {label}
-      {badge !== undefined && badge > 0 && <span className="ml-auto min-w-5 rounded-full bg-orange-500 px-1.5 py-0.5 text-center text-[10px] font-black text-white">{badge > 99 ? "99+" : badge}</span>}
+      {visibleBadge !== undefined && visibleBadge > 0 && <span className="ml-auto min-w-5 rounded-full bg-orange-500 px-1.5 py-0.5 text-center text-[10px] font-black text-white">{visibleBadge > 99 ? "99+" : visibleBadge}</span>}
     </Link>
   );
 }

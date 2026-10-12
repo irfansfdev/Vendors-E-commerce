@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeDollarSign, Box, CircleDollarSign, ExternalLink, Plus, ShoppingBag, type LucideIcon } from "lucide-react";
+import { BadgeDollarSign, Box, CircleDollarSign, ExternalLink, Plus, ShoppingBag } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { CompactPanel } from "@/components/shared/compact-panel";
+import { formatMoney, StatCard } from "@/components/shared/stat-card";
 import { DashboardAnalyticsHub } from "@/components/shared/dashboard-analytics-hub";
 
 type Row = Record<string, unknown>;
@@ -51,7 +53,6 @@ export function SellerDashboard({ shop, products, orders, payouts, earnings, ord
     totalsByOrder.set(String(item.shop_order_id), (totalsByOrder.get(String(item.shop_order_id)) ?? 0) + itemTotal);
   }
   const ordersWithTotals: Row[] = orders.map((order) => ({ ...order, calculated_total: totalsByOrder.get(String(order.id)) ?? order.calculated_total }));
-  const paidOrders = ordersWithTotals.filter(isPaid);
   const deliveredOrders = ordersWithTotals.filter(isDelivered);
   const statusDeliveredOrders = ordersWithTotals.filter((order) => orderStatus(order) === "delivered");
   const completedOrders = ordersWithTotals.filter((order) => orderStatus(order) === "completed");
@@ -61,7 +62,6 @@ export function SellerDashboard({ shop, products, orders, payouts, earnings, ord
   const cancelledOrders = ordersWithTotals.filter((order) => orderStatus(order) === "cancelled");
 
   const sales = ordersWithTotals.reduce((total, order) => total + orderAmount(order), 0);
-  const deliveredSales = deliveredOrders.reduce((total, order) => total + orderAmount(order), 0);
   const monthlyTimeline = getMonthlyTimeline(ordersWithTotals);
 
   const earningAmount = (earning: Row) => Number(earning.net_amount ?? 0);
@@ -190,15 +190,6 @@ export function SellerDashboard({ shop, products, orders, payouts, earnings, ord
 
   const shopSlug = String(shop.slug ?? "");
   const shopName = String(shop.name ?? "Your shop");
-  const metrics: Array<{ icon: LucideIcon; value: string | number; label: string; detail: string }> = [
-    { icon: CircleDollarSign, value: formatCurrency(sales), label: "Net sales", detail: `${ordersWithTotals.length} shop orders after refunds` },
-    { icon: CircleDollarSign, value: formatCurrency(deliveredSales), label: "Net delivered sales", detail: `${deliveredOrders.length} delivered orders` },
-    { icon: ShoppingBag, value: orders.length, label: "Seller orders", detail: `${orders.filter((order) => orderStatus(order) === "processing").length} processing` },
-    { icon: Box, value: productsSold, label: "Products sold", detail: `${products.length} active products` },
-    { icon: BadgeDollarSign, value: formatCurrency(pendingPayout), label: "Pending payout", detail: "After fees" },
-    { icon: BadgeDollarSign, value: formatCurrency(availableBalance), label: "Available balance", detail: `${formatCurrency(paidPayout)} paid out` },
-  ];
-
   return (
     <main className="w-full min-w-0 mx-auto max-w-[1100px] px-4 py-2 sm:px-6 lg:px-8">
       <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -215,51 +206,61 @@ export function SellerDashboard({ shop, products, orders, payouts, earnings, ord
         </div>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.slice(0, 4).map(({ icon: Icon, value, label, detail }) => (
-          <div key={label} className="surface p-5">
-            <span className="grid size-11 place-items-center rounded-2xl bg-orange-50 text-orange-500 dark:bg-orange-500/10"><Icon className="size-5" /></span>
-            <p className="mt-5 text-xs font-bold text-slate-500">{label}</p>
-            <p className="mt-1 text-2xl font-black">{value}</p>
-            <p className="mt-1 text-[11px] text-slate-400">{detail}</p>
-          </div>
-        ))}
+      <section aria-label="Key shop metrics" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <StatCard
+          label="Net sales"
+          value={formatMoney(sales)}
+          exactValue={sales}
+          subtitle={`${ordersWithTotals.filter((order) => isPaid(order) || isDelivered(order)).length.toLocaleString("en-US")} orders paid or delivered`}
+          icon={CircleDollarSign}
+          href="/seller/orders"
+        />
+        <StatCard
+          label="Seller orders"
+          value={orders.length.toLocaleString("en-US")}
+          subtitle={`${orders.filter((order) => orderStatus(order) === "processing").length.toLocaleString("en-US")} orders in progress`}
+          icon={ShoppingBag}
+          href="/seller/orders"
+        />
+        <StatCard
+          label="Products sold"
+          value={productsSold.toLocaleString("en-US")}
+          subtitle={`${products.length.toLocaleString("en-US")} active products`}
+          icon={Box}
+          href="/seller/products"
+        />
+        <StatCard
+          label="Available balance"
+          value={formatMoney(availableBalance)}
+          exactValue={availableBalance}
+          subtitle="Ready to request"
+          icon={BadgeDollarSign}
+          href="/seller/payouts"
+          valueClassName="text-emerald-600 dark:text-emerald-400"
+        />
       </section>
 
-      <section className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Link href="/seller/returns" className="surface p-4 transition hover:border-orange-300">
-          <p className="text-xs font-bold text-slate-500">Returns to respond</p>
-          <p className="mt-2 text-2xl font-black">{needsReturnResponse}</p>
-          <p className="mt-1 text-xs text-slate-400">48-hour response deadline</p>
-        </Link>
-        <Link href="/seller/returns" className="surface p-4 transition hover:border-orange-300">
-          <p className="text-xs font-bold text-slate-500">Open returns</p>
-          <p className="mt-2 text-2xl font-black">{openReturns}</p>
-          <p className="mt-1 text-xs text-slate-400">All active stages</p>
-        </Link>
-        <Link href="/seller/returns" className="surface p-4 transition hover:border-orange-300">
-          <p className="text-xs font-bold text-slate-500">Refunded last 30 days</p>
-          <p className="mt-2 text-2xl font-black">{formatCurrency(refundedLast30Days)}</p>
-          <p className="mt-1 text-xs text-slate-400">Completed return refunds</p>
-        </Link>
-      </section>
-
-      <section className="surface mt-4 grid gap-4 p-5 sm:grid-cols-3">
-        <div>
-          <p className="text-xs font-bold text-slate-500">Pending payout</p>
-          <p className="mt-1 text-lg font-black">{formatCurrency(pendingPayout)}</p>
-          <p className="text-[11px] text-slate-400">After fees</p>
-        </div>
-        <div>
-          <p className="text-xs font-bold text-slate-500">Available balance</p>
-          <p className="mt-1 text-lg font-black text-emerald-600">{formatCurrency(availableBalance)}</p>
-          <p className="text-[11px] text-slate-400">{formatCurrency(paidPayout)} paid out</p>
-        </div>
-        <div>
-          <p className="text-xs font-bold text-slate-500">Refunds</p>
-          <p className="mt-1 text-lg font-black">{formatCurrency(refunds)}</p>
-          <p className="text-[11px] text-slate-400">Returns and refunds</p>
-        </div>
+      <section aria-label="Returns and earnings summaries" className="mt-4 grid gap-4 md:grid-cols-2">
+        <CompactPanel
+          title="Returns"
+          actionHref="/seller/returns"
+          actionLabel="View returns"
+          rows={[
+            { label: "Returns to respond", value: needsReturnResponse.toLocaleString("en-US"), attention: needsReturnResponse > 0, href: "/seller/returns" },
+            { label: "Open returns", value: openReturns.toLocaleString("en-US"), href: "/seller/returns" },
+            { label: "Refunded last 30 days", value: formatMoney(refundedLast30Days), exactValue: refundedLast30Days },
+          ]}
+        />
+        <CompactPanel
+          title="Your earnings"
+          actionHref="/seller/payouts"
+          actionLabel="View payouts"
+          rows={[
+            { label: "Pending payout", value: formatMoney(pendingPayout), exactValue: pendingPayout, helper: "After fees" },
+            { label: "Paid out", value: formatMoney(paidPayout), exactValue: paidPayout },
+            { label: "Refunds", value: formatMoney(refunds), exactValue: refunds },
+          ]}
+        />
       </section>
 
       {/* 5-Tab Analytics Card */}
