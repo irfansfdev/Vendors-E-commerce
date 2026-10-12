@@ -12,7 +12,19 @@ export const dynamic = "force-dynamic";
 
 type Row = Record<string, unknown>;
 
-function amount(row: Row) { const direct = Number(row.gross_amount ?? row.calculated_total ?? row.total_amount ?? row.subtotal ?? row.total ?? row.amount ?? row.order_total ?? row.grand_total ?? row.total_price ?? 0); if (direct > 0) return direct; return Number(row.seller_earnings ?? 0) + Number(row.platform_commission ?? row.platform_fee ?? 0); }
+function amount(row: Row) {
+  const gross = Number(row.gross_amount ?? 0);
+  if (gross > 0) return gross;
+  if (row.sub_total !== undefined) {
+    return Math.max(0, Number(row.sub_total ?? 0) - (row.discount_funded_by === "shop" ? Number(row.discount_amount ?? 0) : 0));
+  }
+  if (row.subtotal_amount !== undefined) {
+    return Math.max(0, Number(row.subtotal_amount ?? 0) - Number(row.discount_amount ?? 0));
+  }
+  const settlement = Number(row.seller_earnings ?? 0) + Number(row.platform_commission ?? row.platform_fee ?? 0);
+  if (settlement > 0) return settlement;
+  return Number(row.calculated_total ?? row.subtotal ?? row.amount ?? row.order_total ?? row.grand_total ?? row.total_price ?? row.total_amount ?? row.total ?? 0);
+}
 function status(row: Row) { return String(row.order_status ?? row.status ?? "pending").toLowerCase(); }
 function isRevenue(row: Row) { return ["paid", "partially_refunded"].includes(String(row.payment_status ?? "").toLowerCase()) || ["delivered", "completed"].includes(status(row)); }
 function monthlySales(rows: Row[]) {
@@ -56,6 +68,14 @@ export default async function AdminPage() {
 
   const sales = revenueRows.filter(isRevenue).reduce((sum, row) => sum + amount(row), 0);
   const deliveredSales = delivered.reduce((sum, row) => sum + amount(row), 0);
+  const nowMs = getCurrentTimeMs();
+  const thirtyDaysAgo = nowMs - 30 * 24 * 60 * 60 * 1000;
+  const recentPricingOrders = shopOrders.filter((row) => {
+    const createdAt = new Date(String(row.created_at ?? "")).getTime();
+    return Number.isFinite(createdAt) && createdAt >= thirtyDaysAgo && createdAt <= nowMs;
+  });
+  const couponDiscounts30d = recentPricingOrders.reduce((sum, row) => sum + Number(row.platform_discount_cost ?? 0) + Number(row.delivery_discount ?? 0), 0);
+  const deliveryFees30d = recentPricingOrders.reduce((sum, row) => sum + Math.max(0, Number(row.delivery_fee ?? 0) - Number(row.delivery_discount ?? 0)), 0);
   const payouts = (payoutsResult.data ?? []) as Row[];
   const returnRows = (returnsResult.data ?? []) as Row[];
   const commission = revenueRows.reduce((sum, row) => sum + Number(row.platform_commission ?? row.platform_fee ?? 0), 0);
@@ -63,7 +83,6 @@ export default async function AdminPage() {
   const points = monthlySales(revenueRows);
   const activeShops = allShops.filter((s) => String(s.status).toLowerCase() === "active");
   const openReturns = returnRows.filter((row) => !["refunded", "rejected", "cancelled"].includes(String(row.status)));
-  const nowMs = getCurrentTimeMs();
   const needsReturnAttention = returnRows.filter((row) => ["escalated", "inspection_failed"].includes(String(row.status))
     || (row.status === "requested" && row.seller_response_due_at && new Date(String(row.seller_response_due_at)).getTime() <= nowMs));
   const refundsPending = returnRows.filter((row) => row.status === "refund_pending").reduce((sum, row) => sum + Number(row.refund_amount ?? 0), 0);
@@ -207,6 +226,10 @@ export default async function AdminPage() {
       <Link href="/admin/returns" className="surface p-4 transition hover:border-orange-300"><p className="text-xs font-bold text-slate-500">Needs attention</p><p className="mt-2 text-2xl font-black">{needsReturnAttention.length}</p><p className="mt-1 text-xs text-slate-400">Overdue, escalated, or failed inspection</p></Link>
       <Link href="/admin/returns" className="surface p-4 transition hover:border-orange-300"><p className="text-xs font-bold text-slate-500">Refunds pending</p><p className="mt-2 text-2xl font-black">{formatCurrency(refundsPending)}</p><p className="mt-1 text-xs text-slate-400">Awaiting refund processing</p></Link>
       <Link href="/admin/returns" className="surface p-4 transition hover:border-orange-300"><p className="text-xs font-bold text-slate-500">Refunded this month</p><p className="mt-2 text-2xl font-black">{formatCurrency(refundedThisMonth)}</p><p className="mt-1 text-xs text-slate-400">Completed customer refunds</p></Link>
+    </section>
+    <section className="mt-4 grid gap-3 sm:grid-cols-2">
+      <Link href="/admin/coupons" className="surface p-4 transition hover:border-orange-300"><p className="text-xs font-bold text-slate-500">Coupon discounts given (30 days)</p><p className="mt-2 text-2xl font-black">{formatCurrency(couponDiscounts30d)}</p><p className="mt-1 text-xs text-slate-400">Platform-funded coupon and delivery discounts</p></Link>
+      <Link href="/admin/settings" className="surface p-4 transition hover:border-orange-300"><p className="text-xs font-bold text-slate-500">Delivery fees collected (30 days)</p><p className="mt-2 text-2xl font-black">{formatCurrency(deliveryFees30d)}</p><p className="mt-1 text-xs text-slate-400">Delivery fees charged after delivery discounts</p></Link>
     </section>
     {returnsResult.error ? <section className="surface mt-4 p-4 text-sm text-rose-600">Could not load return metrics: {returnsResult.error.message}</section> : <section className="surface mt-4 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5 dark:border-white/10"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Marketplace health</p><h2 className="mt-1 text-lg font-black">Shops with highest return rate</h2></div><Link href="/admin/returns" className="text-xs font-bold text-orange-500">Review returns</Link></div>

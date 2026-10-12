@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { BadgeDollarSign, Bike, Box, Boxes, ClipboardList, CreditCard, Heart, LayoutDashboard, MapPin, RotateCcw, Settings, ShoppingBag, Star, Store, UserRound } from "lucide-react";
+import { BadgeDollarSign, Bike, Box, Boxes, ClipboardList, CreditCard, Heart, LayoutDashboard, MapPin, RotateCcw, Settings, ShoppingBag, Star, Store, TicketPercent, UserRound } from "lucide-react";
 
 const icons = {
   dashboard: LayoutDashboard,
@@ -23,6 +23,7 @@ const icons = {
   sellerPayouts: BadgeDollarSign,
   settings: Settings,
   returnPickups: RotateCcw,
+  coupons: TicketPercent,
 } as const;
 
 export function ActiveNavLink({

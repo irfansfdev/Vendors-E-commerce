@@ -27,24 +27,16 @@ export default async function RiderAssignmentsPage({ searchParams }: { searchPar
     : null;
   const assignments = (correctedDeliveryRows?.data ?? data ?? []) as Row[];
   const orderIds = assignments.map((row) => String(row.shop_order_id));
-  const [{ data: orders }, { data: items }] = await Promise.all([
-    orderIds.length ? supabase.from("shop_orders").select("id,shop_id,payment_method,gross_amount,total_amount,subtotal").in("id", orderIds) : Promise.resolve({ data: [] }),
-    orderIds.length ? supabase.from("order_items").select("shop_order_id,quantity,product_variants(price,products(price))").in("shop_order_id", orderIds) : Promise.resolve({ data: [] }),
-  ]);
+  const { data: orders } = orderIds.length
+    ? await supabase.from("shop_orders").select("id,shop_id,payment_method,payable_total").in("id", orderIds)
+    : { data: [] };
   const shopIds = [...new Set((orders ?? []).map((order) => String(order.shop_id)).filter(Boolean))];
   const { data: shops } = shopIds.length ? await supabase.from("shops").select("id,name").in("id", shopIds) : { data: [] };
   const orderById = new Map((orders ?? []).map((order) => [String(order.id), order as Row]));
   const shopById = new Map((shops ?? []).map((shop) => [String(shop.id), String(shop.name ?? "Shop")]));
-  const itemTotalByOrder = new Map<string, number>();
-  for (const item of (items ?? []) as Row[]) {
-    const variant = item.product_variants ?? {};
-    const product = variant.products ?? {};
-    const total = Number(item.quantity ?? 0) * Number(variant.price ?? product.price ?? 0);
-    itemTotalByOrder.set(String(item.shop_order_id), (itemTotalByOrder.get(String(item.shop_order_id)) ?? 0) + total);
-  }
   const deliveryRows: RiderDeliveryRow[] = assignments.map((assignment) => {
     const order = orderById.get(String(assignment.shop_order_id)) ?? {};
-    const amount = Number(assignment.cod_expected_amount ?? 0) || Number(order.gross_amount ?? order.total_amount ?? order.subtotal ?? 0) || itemTotalByOrder.get(String(assignment.shop_order_id)) || 0;
+    const amount = Number(order.payable_total ?? assignment.cod_expected_amount ?? 0);
     return { id: String(assignment.id), shopOrderId: String(assignment.shop_order_id), shopName: shopById.get(String(order.shop_id)) ?? "Shop", status: String(assignment.status), amount, paymentMethod: String(order.payment_method ?? "cash_on_delivery"), assignedAt: assignment.assigned_at ? new Date(String(assignment.assigned_at)).toLocaleDateString() : "-" };
   });
   const pickups = (Array.isArray(pickupData) ? pickupData : []) as Row[];

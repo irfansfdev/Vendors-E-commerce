@@ -24,7 +24,7 @@ export default async function NewReturnPage({
   const supabase = await createClient();
   const { data: shopOrder, error: shopOrderError } = await supabase
     .from("shop_orders")
-    .select("id,parent_order_id,shop_id,order_status,delivered_at,shops(name,return_window_days)")
+    .select("id,parent_order_id,shop_id,order_status,delivered_at,delivery_fee,shops(name,return_window_days)")
     .eq("id", id)
     .maybeSingle();
   if (shopOrderError) {
@@ -55,7 +55,7 @@ export default async function NewReturnPage({
 
   const [{ data: rows, error: itemError }, { data: reservations, error: reservationError }] = await Promise.all([
     supabase.from("order_items")
-      .select("id,quantity,returned_qty,price_at_checkout,product_variants(products(title,is_returnable))")
+      .select("id,quantity,returned_qty,price_at_checkout,discount_amount,product_variants(products(title,is_returnable))")
       .eq("shop_order_id", id),
     existingReturns?.length
       ? supabase.from("return_items")
@@ -84,6 +84,7 @@ export default async function NewReturnPage({
       returnedQty: Number(row.returned_qty ?? 0),
       reservedQty: reservedByItem.get(String(row.id)) ?? 0,
       price: Number(row.price_at_checkout ?? 0),
+      discountAmount: Number(row.discount_amount ?? 0),
       returnable: product.is_returnable !== false,
     };
   });
@@ -104,6 +105,7 @@ export default async function NewReturnPage({
         deliveredAt={shopOrder.delivered_at ? String(shopOrder.delivered_at) : null}
         returnWindowDays={Number(shop.return_window_days ?? 7)}
         orderStatus={String(shopOrder.order_status ?? "")}
+        deliveryFee={Number(shopOrder.delivery_fee ?? 0)}
         items={itemInputs}
       />
     </main>

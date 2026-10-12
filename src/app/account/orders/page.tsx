@@ -122,10 +122,12 @@ export default async function AccountOrdersPage({ searchParams }: { searchParams
                         <div>
                           <h3 className="font-extrabold">Order #{String(order.id).slice(0, 8)}</h3>
                           <p className="mt-1 text-xs text-slate-500">{order.created_at ? new Date(String(order.created_at)).toLocaleString() : ""}</p>
+                          <p className="mt-2 text-xs text-slate-500">Items {formatCurrency(Number(order.subtotal_amount ?? order.total_amount ?? 0))} · discount −{formatCurrency(Number(order.discount_amount ?? 0))} · delivery {Number(order.delivery_fee ?? 0) ? formatCurrency(Number(order.delivery_fee)) : "Free"} · refunded {formatCurrency(Number(order.refund_amount ?? 0))}</p>
+                          {order.coupon_code && <p className="mt-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">Coupon {String(order.coupon_code)}</p>}
                         </div>
                         <div className="flex items-center gap-3 text-right">
                           <div>
-                            <p className="font-black">{formatCurrency(Number(order.total_amount ?? order.subtotal ?? order.total ?? 0))}</p>
+                            <p className="font-black">{formatCurrency(Number(order.total_amount ?? order.payable_total ?? 0))}</p>
                             <span className="text-xs font-bold capitalize text-orange-600">{String(orderStatus ?? order.order_status ?? "pending")}</span>
                           </div>
                           <AccountOrderActions orderHref={orderHref} returnActions={orderReturnActions} />
@@ -136,9 +138,11 @@ export default async function AccountOrdersPage({ searchParams }: { searchParams
                       <div>
                         <h3 className="font-extrabold">Order #{String(order.id).slice(0, 8)}</h3>
                         <p className="mt-1 text-xs text-slate-500">{order.created_at ? new Date(String(order.created_at)).toLocaleString() : ""}</p>
+                        <p className="mt-2 text-xs text-slate-500">Items {formatCurrency(Number(order.subtotal_amount ?? order.total_amount ?? 0))} · discount −{formatCurrency(Number(order.discount_amount ?? 0))} · delivery {Number(order.delivery_fee ?? 0) ? formatCurrency(Number(order.delivery_fee)) : "Free"} · refunded {formatCurrency(Number(order.refund_amount ?? 0))}</p>
+                        {order.coupon_code && <p className="mt-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">Coupon {String(order.coupon_code)}</p>}
                       </div>
                       <div className="text-right">
-                        <p className="font-black">{formatCurrency(Number(order.total_amount ?? order.subtotal ?? order.total ?? 0))}</p>
+                        <p className="font-black">{formatCurrency(Number(order.total_amount ?? order.payable_total ?? 0))}</p>
                         <span className="text-xs font-bold capitalize text-orange-600">{String(orderStatus ?? order.order_status ?? "pending")}</span>
                       </div>
                     </Link>
@@ -156,6 +160,8 @@ export default async function AccountOrdersPage({ searchParams }: { searchParams
                               <div>
                                 <p className="text-sm font-bold">{String(shop.name ?? "Shop")}</p>
                                 <p className="mt-1 text-xs capitalize text-slate-500">{String(shopOrder.order_status ?? orderStatus).replaceAll("_", " ")}</p>
+                                <p className="mt-1 text-xs text-slate-500">Items {formatCurrency(Number(shopOrder.sub_total ?? 0))} · coupon −{formatCurrency(Number(shopOrder.discount_amount ?? 0))} · delivery {Number(shopOrder.delivery_fee ?? 0) ? formatCurrency(Number(shopOrder.delivery_fee)) : "Free"}</p>
+                                <p className="mt-1 text-xs font-bold">Payable {formatCurrency(Number(shopOrder.payable_total ?? shopOrder.sub_total ?? 0))}{Number(shopOrder.refund_amount ?? 0) > 0 ? ` · refunded ${formatCurrency(Number(shopOrder.refund_amount))}` : ""}</p>
                                 {delivered && deadline && <p className="mt-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">Return by {formatReturnDate(deadline)}</p>}
                                 {delivered && !deadline && <p className="mt-1 text-xs text-slate-400">Returns are disabled for this shop.</p>}
                               </div>

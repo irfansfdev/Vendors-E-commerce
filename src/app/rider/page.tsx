@@ -12,12 +12,13 @@ export const dynamic = "force-dynamic";
 
 export default async function RiderPage() {
   const { supabase, rider } = await getRiderContext();
-  const { data: assignments } = await supabase.from("delivery_assignments").select("*, shop_orders(id, order_status, payment_method, gross_amount, parent_order_id)").eq("rider_id", String(rider.id)).eq("assignment_type", "delivery").order("assigned_at", { ascending: false }).limit(100);
+  const { data: assignments } = await supabase.from("delivery_assignments").select("*, shop_orders(id, order_status, payment_method, payable_total, parent_order_id)").eq("rider_id", String(rider.id)).eq("assignment_type", "delivery").order("assigned_at", { ascending: false }).limit(100);
   const { data: returnAssignments, error: returnAssignmentsError } = await supabase.from("delivery_assignments").select("id,return_request_id,status,delivery_attempt_count,assigned_at").eq("rider_id", String(rider.id)).eq("assignment_type", "return_pickup").order("assigned_at", { ascending: true }).limit(100);
   const returnRows = returnAssignments ?? [];
   const activeReturnRows = returnRows.filter((row) => !["delivered", "cancelled"].includes(String(row.status))
     && !(String(row.status) === "failed" && Number(row.delivery_attempt_count ?? 0) >= 2));
   const rows = (assignments ?? []) as Record<string, any>[];
+  const expectedCod = (row: Record<string, any>) => Number(row.shop_orders?.payable_total ?? row.cod_expected_amount ?? 0);
   const active = rows.filter((row) => !["delivered", "failed", "cancelled"].includes(String(row.status).toLowerCase()));
   const completed = rows.filter((row) => String(row.status).toLowerCase() === "delivered");
   const failed = rows.filter((row) => String(row.status).toLowerCase() === "failed");
@@ -26,7 +27,7 @@ export default async function RiderPage() {
   const queue = active.filter((row) => !["picked_up", "out_for_delivery"].includes(String(row.status).toLowerCase()));
   
   const cod = completed.reduce((sum, row) => sum + Number(row.cod_collected_amount ?? 0), 0);
-  const totalExpectedCod = rows.reduce((sum, row) => sum + Number(row.cod_expected_amount ?? 0), 0);
+  const totalExpectedCod = rows.reduce((sum, row) => sum + expectedCod(row), 0);
   
   const now = new Date();
   const timeline = Array.from({ length: 12 }, (_, index) => {
@@ -47,7 +48,7 @@ export default async function RiderPage() {
     const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const monthRows = rows.filter((r) => String(r.assigned_at ?? r.created_at ?? "").slice(0, 7) === key);
-    const expected = monthRows.reduce((sum, r) => sum + Number(r.cod_expected_amount ?? 0), 0);
+    const expected = monthRows.reduce((sum, r) => sum + expectedCod(r), 0);
     const collected = monthRows.reduce((sum, r) => sum + Number(r.cod_collected_amount ?? 0), 0);
     return {
       label: date.toLocaleDateString("en-US", { month: "short" }),
@@ -83,9 +84,9 @@ export default async function RiderPage() {
       thisWeekDate: dThis.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       lastWeekDate: dLast.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       thisWeekOrders: thisDayRows.length,
-      thisWeekAmount: thisDayRows.reduce((sum, r) => sum + Number(r.cod_collected_amount ?? r.cod_expected_amount ?? 0), 0),
+      thisWeekAmount: thisDayRows.reduce((sum, r) => sum + Number(r.cod_collected_amount ?? expectedCod(r)), 0),
       lastWeekOrders: lastDayRows.length,
-      lastWeekAmount: lastDayRows.reduce((sum, r) => sum + Number(r.cod_collected_amount ?? r.cod_expected_amount ?? 0), 0),
+      lastWeekAmount: lastDayRows.reduce((sum, r) => sum + Number(r.cod_collected_amount ?? expectedCod(r)), 0),
     };
   });
 
@@ -104,7 +105,7 @@ export default async function RiderPage() {
   ];
 
   // COD Settlement Mix
-  const failedCod = failed.reduce((sum, r) => sum + Number(r.cod_expected_amount ?? 0), 0);
+  const failedCod = failed.reduce((sum, r) => sum + expectedCod(r), 0);
   const pendingCod = Math.max(totalExpectedCod - cod - failedCod, 0);
   const codSettlementItems = [
     { label: "COD Collected (Delivered)", count: completed.length, amount: cod, color: "#10b981", detail: "Cash in hand" },
@@ -165,7 +166,7 @@ export default async function RiderPage() {
     />
   </div>
 
-  <section className="surface mt-6 overflow-hidden"><div className="flex items-center justify-between border-b border-slate-100 p-6 dark:border-white/10"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Your route</p><h2 className="mt-1 text-xl font-black">Recent assignments</h2></div><Link href="/rider/assignments?type=delivery" className="text-xs font-bold text-orange-500">View deliveries</Link></div>{rows.length === 0 ? <p className="p-10 text-center text-sm text-slate-500">No delivery assignments yet.</p> : <div className="divide-y divide-slate-100 dark:divide-white/10"><PaginatedList pageSize={10} items={rows.map((row) => <Link key={String(row.id)} href={`/rider/assignments/${String(row.id)}`} className="flex items-center justify-between gap-4 p-5 hover:bg-orange-50/50 dark:hover:bg-white/5"><div><p className="font-black">Order #{String(row.shop_order_id).slice(0, 8)}</p><p className="mt-1 text-xs capitalize text-slate-500">{String(row.status).replaceAll("_", " ")}</p></div><p className="font-black">{formatCurrency(Number(row.cod_expected_amount ?? 0))}</p></Link>)}/></div>}</section>
+  <section className="surface mt-6 overflow-hidden"><div className="flex items-center justify-between border-b border-slate-100 p-6 dark:border-white/10"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Your route</p><h2 className="mt-1 text-xl font-black">Recent assignments</h2></div><Link href="/rider/assignments?type=delivery" className="text-xs font-bold text-orange-500">View deliveries</Link></div>{rows.length === 0 ? <p className="p-10 text-center text-sm text-slate-500">No delivery assignments yet.</p> : <div className="divide-y divide-slate-100 dark:divide-white/10"><PaginatedList pageSize={10} items={rows.map((row) => <Link key={String(row.id)} href={`/rider/assignments/${String(row.id)}`} className="flex items-center justify-between gap-4 p-5 hover:bg-orange-50/50 dark:hover:bg-white/5"><div><p className="font-black">Order #{String(row.shop_order_id).slice(0, 8)}</p><p className="mt-1 text-xs capitalize text-slate-500">{String(row.status).replaceAll("_", " ")}</p></div><p className="font-black">{formatCurrency(expectedCod(row))}</p></Link>)}/></div>}</section>
   {activeReturnRows.length > 0 && <section className="surface mt-6 overflow-hidden"><div className="flex items-center justify-between border-b border-slate-100 p-6 dark:border-white/10"><div><p className="text-[11px] font-black uppercase tracking-[.16em] text-orange-500">Separate route tasks</p><h2 className="mt-1 text-xl font-black">Return pickups</h2></div><Link href="/rider/assignments?type=return_pickup" className="text-xs font-bold text-orange-500">View all</Link></div><div className="divide-y divide-slate-100 dark:divide-white/10">{activeReturnRows.slice(0, 5).map((row) => <Link key={String(row.id)} href={`/rider/assignments/${String(row.id)}`} className="flex items-center justify-between gap-4 p-5 hover:bg-orange-50/50 dark:hover:bg-white/5"><div><span className="mb-2 inline-flex rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-black uppercase text-orange-700 dark:bg-orange-500/10 dark:text-orange-300">Return pickup</span><p className="font-black">Return #{String(row.return_request_id).slice(0, 8).toUpperCase()}</p><div className="mt-1"><ReturnStatusBadge status={String(row.status)} /></div></div><span className="text-xs font-bold text-orange-600">Open task</span></Link>)}</div></section>}</main>;
 }
 function Metric({ icon: Icon, label, value, detail }: { icon: typeof Bike; label: string; value: string | number; detail: string }) { return <div className="surface p-5"><span className="grid size-11 place-items-center rounded-2xl bg-orange-50 text-orange-500 dark:bg-orange-500/10"><Icon className="size-5" /></span><p className="mt-5 text-xs font-bold text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p><p className="mt-1 text-[11px] text-slate-400">{detail}</p></div>; }

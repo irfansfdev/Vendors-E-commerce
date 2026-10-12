@@ -25,6 +25,7 @@ type ReturnableItem = {
   returnedQty: number;
   reservedQty: number;
   price: number;
+  discountAmount: number;
   returnable: boolean;
 };
 
@@ -34,6 +35,7 @@ type Props = {
   deliveredAt: string | null;
   returnWindowDays: number;
   orderStatus: string;
+  deliveryFee: number;
   items: ReturnableItem[];
 };
 
@@ -46,6 +48,7 @@ export function ReturnRequestForm({
   deliveredAt,
   returnWindowDays,
   orderStatus,
+  deliveryFee,
   items,
 }: Props) {
   const router = useRouter();
@@ -70,14 +73,22 @@ export function ReturnRequestForm({
   const selectedItems = eligibleItems
     .filter((item) => (quantities[item.id] ?? 0) > 0)
     .map((item) => ({ ...item, selectedQty: quantities[item.id] }));
-  const itemRefund = selectedItems.reduce(
-    (sum, item) => sum + item.price * item.selectedQty,
-    0,
-  );
+  const itemRefund = selectedItems.reduce((sum, item) => {
+    const allocatedDiscount = item.quantity > 0
+      ? Math.round((item.discountAmount * item.selectedQty / item.quantity) * 100) / 100
+      : 0;
+    return sum + item.price * item.selectedQty - allocatedDiscount;
+  }, 0);
   const pickupFee = reason === "size_fit" || reason === "changed_mind"
     ? RETURN_PICKUP_FEE_PKR
     : 0;
-  const estimatedRefund = Math.max(0, itemRefund - pickupFee);
+  const fullShopReturn = items.length > 0 && items.every((item) =>
+    item.returnedQty + (quantities[item.id] ?? 0) >= item.quantity,
+  );
+  const refundDelivery = fullShopReturn && ["damaged_defective", "wrong_item", "not_as_described", "missing_item"].includes(reason)
+    ? deliveryFee
+    : 0;
+  const estimatedRefund = Math.max(0, itemRefund - pickupFee + refundDelivery);
   const canReturn = ["delivered", "completed"].includes(orderStatus.toLowerCase())
     && isReturnWindowOpen(deadline);
   const needsPhotos = returnReasonRequiresPhotos(reason);
@@ -295,12 +306,18 @@ export function ReturnRequestForm({
           <div className="mt-5 space-y-5">
             <div className="rounded-xl bg-slate-50 p-4 dark:bg-white/5">
               <h2 className="font-black">Items requested</h2>
-              {selectedItems.map((item) => <div key={item.id} className="mt-3 flex justify-between gap-3 text-sm"><span>{item.title} × {item.selectedQty}</span><span className="font-bold">{formatCurrency(item.price * item.selectedQty)}</span></div>)}
+              {selectedItems.map((item) => {
+                const allocatedDiscount = item.quantity > 0
+                  ? Math.round((item.discountAmount * item.selectedQty / item.quantity) * 100) / 100
+                  : 0;
+                return <div key={item.id} className="mt-3 flex justify-between gap-3 text-sm"><span>{item.title} × {item.selectedQty}</span><span className="font-bold">{formatCurrency(item.price * item.selectedQty - allocatedDiscount)}</span></div>;
+              })}
             </div>
             <div className="space-y-2 text-sm">
               <p className="flex justify-between"><span className="text-slate-500">Reason</span><b>{RETURN_REASONS[reason]}</b></p>
               <p className="flex justify-between"><span className="text-slate-500">Item refund</span><b>{formatCurrency(itemRefund)}</b></p>
               {pickupFee > 0 && <p className="flex justify-between"><span className="text-slate-500">Pickup fee</span><b>− {formatCurrency(pickupFee)}</b></p>}
+              {refundDelivery > 0 && <p className="flex justify-between"><span className="text-slate-500">Full shop-fault delivery refund</span><b>+ {formatCurrency(refundDelivery)}</b></p>}
               <p className="flex justify-between border-t border-slate-200 pt-3 text-base dark:border-white/10"><span className="font-black">Estimated refund</span><b className="font-black text-orange-600">{formatCurrency(estimatedRefund)}</b></p>
             </div>
             <p className="text-xs leading-5 text-slate-500">Shipping charges are not included. Refund is based on purchase-time item prices and is subject to review.</p>

@@ -11,6 +11,8 @@ type CartContextValue = {
   lines: CartLine[];
   itemCount: number;
   subtotal: number;
+  couponCode: string;
+  setCouponCode: (code: string) => void;
   addItem: (product: Product, variant?: ProductVariant, quantity?: number) => void;
   removeItem: (lineId: string) => void;
   updateQuantity: (lineId: string, quantity: number) => void;
@@ -30,6 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [cartOwner, setCartOwner] = useState("guest");
   const [lines, setLines] = useState<CartLine[]>([]);
+  const [couponCode, setCouponCode] = useState("");
   const [ready, setReady] = useState(false);
 
   function storageKey(owner: string) {
@@ -135,6 +138,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       lines,
+      couponCode,
+      setCouponCode,
       itemCount: lines.reduce((total, line) => total + line.quantity, 0),
       subtotal: lines.reduce(
         (total, line) => total + (line.variant?.price ?? line.product.price) * line.quantity,
@@ -145,7 +150,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       updateQuantity,
       clearCart,
     }),
-    [lines, addItem, removeItem, updateQuantity, clearCart],
+    [lines, couponCode, addItem, removeItem, updateQuantity, clearCart],
   );
 
   return (

@@ -61,7 +61,7 @@ export default async function CustomerOrderPage({ params }: { params: Params }) 
   const [{ data: items, error: itemsError }, { data: returnRows, error: returnError }] = shopOrderIds.length
     ? await Promise.all([
       supabase.from("order_items")
-        .select("id,shop_order_id,quantity,returned_qty,price_at_checkout,product_variants(products(title,is_returnable))")
+        .select("id,shop_order_id,quantity,returned_qty,price_at_checkout,discount_amount,product_variants(products(title,is_returnable))")
         .in("shop_order_id", shopOrderIds),
       supabase.from("return_requests")
         .select("id,shop_order_id,status")
@@ -139,14 +139,21 @@ export default async function CustomerOrderPage({ params }: { params: Params }) 
             return (
               <article key={String(shopOrder.id)} className="p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div><h3 className="font-black">{String(shop.name ?? "Shop")}</h3><p className="mt-1 text-xs capitalize text-slate-500">{String(shopOrder.order_status ?? "pending").replaceAll("_", " ")}</p></div>
+                  <div>
+                    <h3 className="font-black">{String(shop.name ?? "Shop")}</h3>
+                    <p className="mt-1 text-xs capitalize text-slate-500">{String(shopOrder.order_status ?? "pending").replaceAll("_", " ")}</p>
+                    <p className="mt-2 text-xs text-slate-500">Items {formatCurrency(Number(shopOrder.sub_total ?? 0))} · discount −{formatCurrency(Number(shopOrder.discount_amount ?? 0))} · delivery {Number(shopOrder.delivery_fee ?? 0) ? formatCurrency(Number(shopOrder.delivery_fee)) : "Free"}</p>
+                    <p className="mt-1 text-xs font-bold">Payable {formatCurrency(Number(shopOrder.payable_total ?? shopOrder.sub_total ?? 0))} · refunded {formatCurrency(Number(shopOrder.refund_amount ?? 0))}</p>
+                    {shopOrder.coupon_id && <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">{String(shopOrder.discount_funded_by ?? "shop") === "platform" ? "BabulShop-funded coupon" : "Shop-funded coupon"}</p>}
+                  </div>
                   {delivered && deadline && <span className={`rounded-full px-3 py-1 text-xs font-bold ${isReturnWindowOpen(deadline) ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-white/5"}`}>{isReturnWindowOpen(deadline) ? `Return by ${formatReturnDate(deadline)}` : `Return window ended ${formatReturnDate(deadline)}`}</span>}
                 </div>
                 <div className="mt-4 space-y-2">
                   {shopItems.map((item) => {
                     const product = item.product_variants?.products ?? {};
                     const remaining = Number(item.quantity ?? 0) - Number(item.returned_qty ?? 0) - (reservedByItem.get(String(item.id)) ?? 0);
-                    return <div key={String(item.id)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-white/5"><span>{String(product.title ?? "Product")} × {Number(item.quantity ?? 0)}</span><span className={`text-xs font-semibold ${product.is_returnable === false || remaining <= 0 ? "text-slate-400" : "text-emerald-700 dark:text-emerald-400"}`}>{product.is_returnable === false ? "Not returnable" : remaining <= 0 ? "No returnable quantity left" : `${remaining} returnable`}</span></div>;
+                    const lineNet = Number(item.price_at_checkout ?? 0) * Number(item.quantity ?? 0) - Number(item.discount_amount ?? 0);
+                    return <div key={String(item.id)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-white/5"><span>{String(product.title ?? "Product")} × {Number(item.quantity ?? 0)}<span className="ml-2 text-xs text-slate-500">Net {formatCurrency(lineNet)}</span></span><span className={`text-xs font-semibold ${product.is_returnable === false || remaining <= 0 ? "text-slate-400" : "text-emerald-700 dark:text-emerald-400"}`}>{product.is_returnable === false ? "Not returnable" : remaining <= 0 ? "No returnable quantity left" : `${remaining} returnable`}</span></div>;
                   })}
                 </div>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -158,12 +165,22 @@ export default async function CustomerOrderPage({ params }: { params: Params }) 
           {shopOrders.length === 0 && <p className="p-6 text-sm text-slate-500">No shop shipments found for this order.</p>}
         </div>
       </section>
-      {!selectedShopOrderId && (
-        <section className="mt-6 grid gap-6 sm:grid-cols-2">
-          <div className="surface p-6"><h2 className="font-black">Order summary</h2><dl className="mt-5 space-y-3 text-sm"><div className="flex justify-between gap-4"><dt className="text-slate-500">Total</dt><dd className="font-black">{formatCurrency(Number(parent.total_amount ?? parent.subtotal ?? parent.total ?? 0))}</dd></div><div className="flex justify-between gap-4"><dt className="text-slate-500">Payment</dt><dd className="font-bold capitalize">{String(parent.payment_status ?? parent.payment_method ?? "pending")}</dd></div></dl></div>
-          <div className="surface p-6"><h2 className="font-black">Shipping information</h2><p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">{String(parent.shipping_address ?? parent.address ?? "Your saved delivery address")}</p></div>
+      <section className="mt-6 grid gap-6 sm:grid-cols-2">
+          <div className="surface p-6">
+            <h2 className="font-black">Order summary</h2>
+            <dl className="mt-5 space-y-3 text-sm">
+              <div className="flex justify-between gap-4"><dt className="text-slate-500">Items subtotal</dt><dd>{formatCurrency(Number(parent.subtotal_amount ?? parent.total_amount ?? 0))}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-slate-500">Coupon discount</dt><dd>− {formatCurrency(Number(parent.discount_amount ?? 0))}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-slate-500">Delivery</dt><dd>{Number(parent.delivery_fee ?? 0) ? formatCurrency(Number(parent.delivery_fee)) : "Free"}</dd></div>
+              {Number(parent.delivery_discount ?? 0) > 0 && <div className="flex justify-between gap-4"><dt className="text-slate-500">Delivery discount</dt><dd>− {formatCurrency(Number(parent.delivery_discount))}</dd></div>}
+              <div className="flex justify-between gap-4 border-t border-slate-200 pt-3 dark:border-white/10"><dt className="font-black">Total payable</dt><dd className="font-black">{formatCurrency(Number(parent.total_amount ?? parent.payable_total ?? 0))}</dd></div>
+              {parent.coupon_code && <div className="flex justify-between gap-4"><dt className="text-slate-500">Coupon</dt><dd className="font-bold text-emerald-700 dark:text-emerald-300">{String(parent.coupon_code)}</dd></div>}
+              <div className="flex justify-between gap-4"><dt className="text-slate-500">Refunded</dt><dd>{formatCurrency(Number(parent.refund_amount ?? 0))}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-slate-500">Payment</dt><dd className="font-bold capitalize">{String(parent.payment_status ?? parent.payment_method ?? "pending")}</dd></div>
+            </dl>
+          </div>
+          {!selectedShopOrderId && <div className="surface p-6"><h2 className="font-black">Shipping information</h2><p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">{String(parent.shipping_address ?? parent.address ?? "Your saved delivery address")}</p></div>}
         </section>
-      )}
     </main>
   );
 }
