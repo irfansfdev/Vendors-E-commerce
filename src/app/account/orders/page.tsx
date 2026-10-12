@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogOut, ShoppingBag } from "lucide-react";
-import { AccountSidebar } from "@/components/account-sidebar";
+import { AccountSidebar } from "@/components/layout/account-sidebar";
 import { signoutAction } from "@/app/auth/actions";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { getOrderStatus } from "@/lib/order-status";
 import { formatReturnDate, getReturnDeadline, isReturnWindowOpen } from "@/lib/returns/eligibility";
 import { buildPaginationMeta, parsePagination } from "@/lib/pagination";
 import { UrlPagination } from "@/components/ui/pagination";
-import { AccountOrderActions, type AccountOrderReturnAction } from "@/components/account-order-actions";
+import { AccountOrderActions, type AccountOrderReturnAction } from "@/components/account/account-order-actions";
 import { ClickableCard } from "@/components/ui/clickable-row";
 
 export const metadata: Metadata = { title: "My orders" };

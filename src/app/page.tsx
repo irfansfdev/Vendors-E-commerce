@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { Benefits, CategoryGrid, ProductGrid, SectionHeading, ShopGrid } from "@/components/storefront-sections";
-import { PremiumHero } from "@/components/premium-hero";
+import { Benefits, CategoryGrid, ProductGrid, SectionHeading, ShopGrid } from "@/components/shared/storefront-sections";
+import { PremiumHero } from "@/components/home/premium-hero";
 import { getStorefrontData } from "@/lib/storefront";
 
 export const dynamic = "force-dynamic";

@@ -3,9 +3,9 @@ import Link from "next/link";
 import { ArrowUpRight, BadgeDollarSign, Boxes, CircleDollarSign, ShoppingBag, Store, UsersRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils";
-import { DashboardAnalyticsHub } from "@/components/dashboard-analytics-hub";
+import { DashboardAnalyticsHub } from "@/components/shared/dashboard-analytics-hub";
 import { getCurrentTimeMs } from "@/lib/returns/time";
-import { AdminPendingShopActions } from "@/components/admin-pending-shop-actions";
+import { AdminPendingShopActions } from "@/components/admin/shops/admin-pending-shop-actions";
 
 export const metadata: Metadata = { title: "Platform Admin | BabulShop" };
 export const dynamic = "force-dynamic";

@@ -6,7 +6,7 @@ import { Bike, Eye, LoaderCircle, RotateCcw, Search } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { assignReturnPickup } from "@/lib/returns/actions";
-import { ReturnStatusBadge } from "@/components/return-status-badge";
+import { ReturnStatusBadge } from "@/components/returns/return-status-badge";
 import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 import { RowActions } from "@/components/ui/row-actions";
 

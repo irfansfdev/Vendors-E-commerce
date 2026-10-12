@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Camera, MessagesSquare, Send, ShieldCheck, UsersRound } from "lucide-react";
-import { Logo } from "@/components/logo";
+import { Logo } from "@/components/layout/logo";
 
 const groups = [
   { title: "Shop", links: ["New arrivals", "Best sellers", "Deals", "Gift cards"] },

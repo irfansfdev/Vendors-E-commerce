@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { KeyRound } from "lucide-react";
-import { ResetPasswordForm } from "@/components/reset-password-form";
+import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 
 export const metadata: Metadata = { title: "Choose a new password" };
 

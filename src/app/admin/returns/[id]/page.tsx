@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, CreditCard, PackageCheck, ShieldAlert } from "lucide-react";
-import { AdminReturnControls } from "@/components/admin-return-controls";
-import { ReturnStatusBadge } from "@/components/return-status-badge";
-import { ReturnTimeline } from "@/components/return-timeline";
+import { AdminReturnControls } from "@/components/admin/returns/admin-return-controls";
+import { ReturnStatusBadge } from "@/components/returns/return-status-badge";
+import { ReturnTimeline } from "@/components/returns/return-timeline";
 import { getCurrentTimeMs } from "@/lib/returns/time";
 import { RETURN_REASONS } from "@/lib/returns/config";
 import { createClient } from "@/lib/supabase/server";

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { updateShopStatusAction } from "@/app/actions/admin";
 import { formatCurrency } from "@/lib/utils";
 import { publicStorageUrl } from "@/lib/media";
-import { BreakdownChart, MonthlyChart, type BreakdownPoint } from "@/components/dashboard-charts";
+import { BreakdownChart, MonthlyChart, type BreakdownPoint } from "@/components/admin/shops/dashboard-charts";
 import { Pagination as SharedPagination, useUrlPagination } from "@/components/ui/pagination";
 import { ClickableRow } from "@/components/ui/clickable-row";
 

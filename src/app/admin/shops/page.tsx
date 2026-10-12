@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight, Check, Pause, Store, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { AdminShopsTable } from "@/components/admin-shops-table";
+import { AdminShopsTable } from "@/components/admin/shops/admin-shops-table";
 import { publicStorageUrl } from "@/lib/media";
 
 export const metadata: Metadata = { title: "Shops | BabulShop Admin" };

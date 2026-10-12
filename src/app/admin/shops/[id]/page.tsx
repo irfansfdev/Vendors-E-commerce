@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AdminShopDetails } from "@/components/admin-shop-details";
+import { AdminShopDetails } from "@/components/admin/shops/admin-shop-details";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Shop details | BabulShop Admin" };

@@ -1,4 +1,4 @@
-import { ActiveNavLink } from "@/components/active-nav-link";
+import { ActiveNavLink } from "@/components/layout/active-nav-link";
 
 const items = [
   ["Overview", "/account", "dashboard"],

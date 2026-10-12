@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { AuthForm } from "@/components/auth-form";
+import { AuthForm } from "@/components/auth/auth-form";
 import { loginAction } from "@/app/auth/actions";
 import { safeNextPath } from "@/lib/utils";
 

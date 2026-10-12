@@ -6,12 +6,12 @@ import {
   SellerReturnDecision,
   SellerReturnInspection,
   SellerReturnReceipt,
-} from "@/components/seller-return-controls";
+} from "@/components/seller/returns/seller-return-controls";
 import { createClient } from "@/lib/supabase/server";
 import { getSellerContext } from "@/lib/seller";
 import { getShopReturnRiderDetails } from "@/lib/returns/actions";
-import { ReturnStatusBadge } from "@/components/return-status-badge";
-import { ReturnTimeline } from "@/components/return-timeline";
+import { ReturnStatusBadge } from "@/components/returns/return-status-badge";
+import { ReturnTimeline } from "@/components/returns/return-timeline";
 import { RETURN_REASONS } from "@/lib/returns/config";
 import { getCurrentTimeMs } from "@/lib/returns/time";
 import { formatCurrency } from "@/lib/utils";

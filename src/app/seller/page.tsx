@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { SellerDashboard } from "@/components/seller-dashboard";
-import { SellerOnboarding, ShopPendingNotice } from "@/components/seller-onboarding";
+import { SellerDashboard } from "@/components/seller/seller-dashboard";
+import { SellerOnboarding, ShopPendingNotice } from "@/components/seller/seller-onboarding";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { getCurrentTimeMs } from "@/lib/returns/time";
 

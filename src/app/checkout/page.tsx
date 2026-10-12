@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { CheckoutForm } from "@/components/checkout-form";
+import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Secure checkout" };

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { BadgeDollarSign, Box, CircleDollarSign, ExternalLink, Plus, ShoppingBag, type LucideIcon } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { DashboardAnalyticsHub } from "@/components/dashboard-analytics-hub";
+import { DashboardAnalyticsHub } from "@/components/shared/dashboard-analytics-hub";
 
 type Row = Record<string, unknown>;
 type Props = { shop: Row; products: Row[]; orders: Row[]; payouts: Row[]; earnings: Row[]; orderItems: Row[]; returns: Row[]; role: string; asOfMs: number };

@@ -3,9 +3,9 @@ import Link from "next/link";
 import { ArrowUpRight, Bike, CheckCircle2, Clock3, MapPin, PackageCheck, RotateCcw, TrendingUp } from "lucide-react";
 import { getRiderContext } from "@/lib/rider";
 import { formatCurrency } from "@/lib/utils";
-import { PaginatedList } from "@/components/paginated-list";
-import { DashboardAnalyticsHub } from "@/components/dashboard-analytics-hub";
-import { ReturnStatusBadge } from "@/components/return-status-badge";
+import { PaginatedList } from "@/components/ui/paginated-list";
+import { DashboardAnalyticsHub } from "@/components/shared/dashboard-analytics-hub";
+import { ReturnStatusBadge } from "@/components/returns/return-status-badge";
 
 export const metadata: Metadata = { title: "Rider dashboard" };
 export const dynamic = "force-dynamic";

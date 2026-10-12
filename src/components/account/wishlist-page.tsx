@@ -3,7 +3,7 @@
 import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Heart } from "lucide-react";
-import { ProductGrid } from "@/components/storefront-sections";
+import { ProductGrid } from "@/components/shared/storefront-sections";
 import type { Product } from "@/lib/types";
 import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 

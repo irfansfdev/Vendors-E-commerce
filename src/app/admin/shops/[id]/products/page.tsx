@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { AdminShopProductsTable } from "@/components/admin-shop-products-table";
+import { AdminShopProductsTable } from "@/components/admin/shops/admin-shop-products-table";
 
 export const dynamic = "force-dynamic";
 export default async function AdminShopProductsPage({ params }: { params: Promise<{ id: string }> }) {

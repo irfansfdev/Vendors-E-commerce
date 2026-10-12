@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { WishlistPageContent } from "@/components/wishlist-page";
+import { WishlistPageContent } from "@/components/account/wishlist-page";
 import { getStorefrontData } from "@/lib/storefront";
 
 export const metadata: Metadata = { title: "Saved items" };

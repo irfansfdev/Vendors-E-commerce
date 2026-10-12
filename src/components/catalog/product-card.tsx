@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart, ShoppingBag, Star } from "lucide-react";
 import { toast } from "sonner";
-import { useCart } from "@/components/providers";
+import { useCart } from "@/components/providers/providers";
 import type { Product } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 

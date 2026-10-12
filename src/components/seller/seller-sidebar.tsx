@@ -1,7 +1,7 @@
 "use client";
 
 import { Settings } from "lucide-react";
-import { ActiveNavLink } from "@/components/active-nav-link";
+import { ActiveNavLink } from "@/components/layout/active-nav-link";
 
 const items = [
   { label: "Overview", href: "/seller", icon: "dashboard" as const },

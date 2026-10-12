@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { AdminDeliveryQueueTable, type DeliveryQueueRow } from "@/components/admin-delivery-queue-table";
-import { AdminReturnPickupQueue } from "@/components/admin-return-pickup-queue";
+import { AdminDeliveryQueueTable, type DeliveryQueueRow } from "@/components/admin/deliveries/admin-delivery-queue-table";
+import { AdminReturnPickupQueue } from "@/components/admin/deliveries/admin-return-pickup-queue";
 import { createClient } from "@/lib/supabase/server";
 import { buildPaginationMeta, parsePagination } from "@/lib/pagination";
 

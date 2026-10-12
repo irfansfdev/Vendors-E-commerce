@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { updateReturnPickup } from "@/lib/returns/actions";
 import type { RiderReturnPickupDetails } from "@/lib/returns/types";
-import { ReturnStatusBadge } from "@/components/return-status-badge";
+import { ReturnStatusBadge } from "@/components/returns/return-status-badge";
 
 type Stage = "accepted" | "picked_up" | "out_for_delivery" | "delivered" | "failed";
 

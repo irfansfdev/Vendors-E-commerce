@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { ReturnRequestForm } from "@/components/return-request-form";
+import { ReturnRequestForm } from "@/components/returns/return-request-form";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Return items" };

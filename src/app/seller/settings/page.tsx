@@ -4,7 +4,7 @@ import { ChevronLeft, Settings } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getSellerContext } from "@/lib/seller";
 import { publicStorageUrl } from "@/lib/media";
-import { ShopMediaPicker } from "@/components/shop-media-picker";
+import { ShopMediaPicker } from "@/components/seller/settings/shop-media-picker";
 
 export const metadata: Metadata = { title: "Settings | Seller" };
 export const dynamic = "force-dynamic";

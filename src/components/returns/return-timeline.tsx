@@ -1,7 +1,7 @@
 "use client";
 
 import { Clock3, History } from "lucide-react";
-import { ReturnStatusBadge } from "@/components/return-status-badge";
+import { ReturnStatusBadge } from "@/components/returns/return-status-badge";
 import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 
 type TimelineEvent = {

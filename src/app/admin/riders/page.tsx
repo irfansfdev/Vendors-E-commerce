@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight, Bike, Check, Clock3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { AdminRidersTable, type Rider } from "@/components/admin-riders-table";
+import { AdminRidersTable, type Rider } from "@/components/admin/riders/admin-riders-table";
 
 export const metadata: Metadata = { title: "Riders | BabulShop Admin" };
 export const dynamic = "force-dynamic";

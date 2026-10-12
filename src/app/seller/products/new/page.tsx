@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { ProductEditor } from "@/components/product-editor";
+import { ProductEditor } from "@/components/seller/products/product-editor";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Add product" };

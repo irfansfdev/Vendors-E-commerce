@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AdminReviewsTable } from "@/components/admin-reviews-table";
+import { AdminReviewsTable } from "@/components/admin/reviews/admin-reviews-table";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Reviews | BabulShop" };

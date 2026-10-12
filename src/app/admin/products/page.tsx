@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Archive, ArrowUpRight, Check, Clock3, FileText, Package, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { AdminProductsTable } from "@/components/admin-products-table";
+import { AdminProductsTable } from "@/components/admin/products/admin-products-table";
 
 export const metadata: Metadata = { title: "Products | BabulShop Admin" };
 export const dynamic = "force-dynamic";

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { ReturnStatusBadge } from "@/components/return-status-badge";
+import { ReturnStatusBadge } from "@/components/returns/return-status-badge";
 import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 import { ClickableRow } from "@/components/ui/clickable-row";
 

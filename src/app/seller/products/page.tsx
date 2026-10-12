@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Box, ChevronLeft, ExternalLink, Plus } from "lucide-react";
 import { deleteProductAction } from "./actions";
-import { SellerProductsTable } from "@/components/seller-products-table";
+import { SellerProductsTable } from "@/components/seller/products/seller-products-table";
 import { getSellerContext } from "@/lib/seller";
 import { buildPaginationMeta, parsePagination } from "@/lib/pagination";
 

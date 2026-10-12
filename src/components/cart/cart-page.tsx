@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Minus, Plus, ShieldCheck, ShoppingBag, Trash2, Truck } from "lucide-react";
-import { useCart } from "@/components/providers";
+import { useCart } from "@/components/providers/providers";
 import { formatCurrency } from "@/lib/utils";
 
 export function CartPageContent() {

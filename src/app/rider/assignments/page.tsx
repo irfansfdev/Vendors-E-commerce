@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, ClipboardList } from "lucide-react";
-import { RiderDeliveriesTable, type RiderDeliveryRow } from "@/components/rider-deliveries-table";
-import { ReturnsListTable, type ReturnsListRow } from "@/components/returns-list-table";
+import { RiderDeliveriesTable, type RiderDeliveryRow } from "@/components/rider/rider-deliveries-table";
+import { ReturnsListTable, type ReturnsListRow } from "@/components/returns/returns-list-table";
 import { getRiderContext } from "@/lib/rider";
 import { getCurrentTimeMs } from "@/lib/returns/time";
 import { buildPaginationMeta, parsePagination } from "@/lib/pagination";

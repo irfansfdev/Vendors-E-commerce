@@ -1,5 +1,5 @@
 import { Bike } from "lucide-react";
-import { ActiveNavLink } from "@/components/active-nav-link";
+import { ActiveNavLink } from "@/components/layout/active-nav-link";
 import { getRiderContext } from "@/lib/rider";
 
 export default async function RiderLayout({ children }: { children: React.ReactNode }) {

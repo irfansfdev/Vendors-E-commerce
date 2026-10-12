@@ -22,9 +22,9 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { Logo } from "@/components/logo";
-import { useCart } from "@/components/providers";
-import { NotificationBell } from "@/components/notification-bell";
+import { Logo } from "@/components/layout/logo";
+import { useCart } from "@/components/providers/providers";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { signoutAction } from "@/app/auth/actions";
 
 type HeaderUser = {

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown, Grid2X2, Grid3X3, LayoutGrid, X } from "lucide-react";
-import { ProductGrid, ShopGrid } from "@/components/storefront-sections";
+import { ProductGrid, ShopGrid } from "@/components/shared/storefront-sections";
 import type { Category, Product, Shop } from "@/lib/types";
 import { Pagination, useUrlPagination } from "@/components/ui/pagination";
 

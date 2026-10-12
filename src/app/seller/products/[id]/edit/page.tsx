@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getSellerContext } from "@/lib/seller";
-import { ProductForm } from "@/components/admin-product-form";
+import { ProductForm } from "@/components/shared/admin-product-form";
 import { updateProductReturnableAction } from "@/app/seller/products/actions";
 
 export const metadata: Metadata = { title: "Edit product | Seller" };

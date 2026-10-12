@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CalendarDays, ChevronLeft, PackageCheck, PhoneCall, RotateCcw, ShieldCheck, UserRound } from "lucide-react";
-import { ReturnCustomerActions } from "@/components/return-customer-actions";
-import { ReturnStatusBadge } from "@/components/return-status-badge";
-import { ReturnTimeline } from "@/components/return-timeline";
+import { ReturnCustomerActions } from "@/components/returns/return-customer-actions";
+import { ReturnStatusBadge } from "@/components/returns/return-status-badge";
+import { ReturnTimeline } from "@/components/returns/return-timeline";
 import {
   getCustomerReturnPickupCode,
   getCustomerReturnRiderDetails,

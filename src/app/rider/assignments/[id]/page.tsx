@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronLeft, MapPin, Phone, Truck } from "lucide-react";
 import { rejectDeliveryAction, updateDeliveryAction } from "@/app/rider/actions";
 import { getRiderContext } from "@/lib/rider";
-import { RiderReturnPickupWorkflow } from "@/components/rider-return-pickup-workflow";
+import { RiderReturnPickupWorkflow } from "@/components/rider/rider-return-pickup-workflow";
 import { getRiderReturnPickupDetails } from "@/lib/returns/actions";
 
 export const metadata: Metadata = { title: "Delivery detail | Rider" };

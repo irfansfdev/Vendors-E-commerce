@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ShopStorefront } from "@/components/shop-storefront";
+import { ShopStorefront } from "@/components/catalog/shop-storefront";
 import { getShopBySlug } from "@/lib/storefront";
 
 type Params = Promise<{ slug: string }>;

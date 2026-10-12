@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, ShoppingBag } from "lucide-react";
 import { getSellerContext } from "@/lib/seller";
-import { SellerOrdersTable } from "@/components/seller-orders-table";
+import { SellerOrdersTable } from "@/components/seller/orders/seller-orders-table";
 import { buildPaginationMeta, parsePagination } from "@/lib/pagination";
 
 export const metadata: Metadata = { title: "Orders | Seller" };

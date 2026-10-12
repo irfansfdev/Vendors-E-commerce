@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Heart, LogOut, MapPin, ShoppingBag } from "lucide-react";
-import { AccountSidebar } from "@/components/account-sidebar";
+import { AccountSidebar } from "@/components/layout/account-sidebar";
 import { signoutAction } from "@/app/auth/actions";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils";

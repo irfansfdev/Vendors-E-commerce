@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, RotateCcw } from "lucide-react";
-import { ReturnsListTable, type ReturnsListRow } from "@/components/returns-list-table";
+import { ReturnsListTable, type ReturnsListRow } from "@/components/returns/returns-list-table";
 import { getSellerContext } from "@/lib/seller";
 import { getCurrentTimeMs } from "@/lib/returns/time";
 import { RETURN_REASONS } from "@/lib/returns/config";

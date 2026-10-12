@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { KeyRound } from "lucide-react";
-import { AuthForm } from "@/components/auth-form";
+import { AuthForm } from "@/components/auth/auth-form";
 import { resetPasswordAction } from "@/app/auth/actions";
 
 export const metadata: Metadata = { title: "Reset password" };

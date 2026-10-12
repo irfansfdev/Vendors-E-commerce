@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CatalogBrowser } from "@/components/catalog-browser";
+import { CatalogBrowser } from "@/components/catalog/catalog-browser";
 import { getStorefrontData } from "@/lib/storefront";
 
 export const metadata: Metadata = { title: "Shop all" };

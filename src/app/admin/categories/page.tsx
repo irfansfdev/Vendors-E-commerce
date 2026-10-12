@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CategoryManager } from "@/components/category-manager";
+import { CategoryManager } from "@/components/admin/categories/category-manager";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Categories | BabulShop" };

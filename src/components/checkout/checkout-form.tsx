@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, ChevronRight, CreditCard, LoaderCircle, LockKeyhole, MapPin, PackageCheck, Truck } from "lucide-react";
 import { toast } from "sonner";
-import { useCart } from "@/components/providers";
+import { useCart } from "@/components/providers/providers";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 

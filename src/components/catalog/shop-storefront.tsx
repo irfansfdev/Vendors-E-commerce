@@ -18,10 +18,10 @@ import {
   Store,
   X,
 } from "lucide-react";
-import { ProductGrid } from "@/components/storefront-sections";
+import { ProductGrid } from "@/components/shared/storefront-sections";
 import type { Product, Shop } from "@/lib/types";
 import { initials } from "@/lib/utils";
-import { MediaPreview } from "@/components/media-preview";
+import { MediaPreview } from "@/components/catalog/media-preview";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 

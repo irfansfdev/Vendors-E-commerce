@@ -18,7 +18,7 @@ import {
   Truck,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useCart } from "@/components/providers";
+import { useCart } from "@/components/providers/providers";
 import type { Product } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 

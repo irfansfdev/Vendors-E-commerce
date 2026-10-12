@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AlertTriangle, Check, CircleDollarSign, RotateCcw, type LucideIcon } from "lucide-react";
-import { ReturnsListTable, type ReturnsListRow } from "@/components/returns-list-table";
+import { ReturnsListTable, type ReturnsListRow } from "@/components/returns/returns-list-table";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTimeMs } from "@/lib/returns/time";
 import { formatCurrency } from "@/lib/utils";

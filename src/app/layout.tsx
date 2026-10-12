@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import type { ReactNode } from "react";
-import { Providers } from "@/components/providers";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
+import { Providers } from "@/components/providers/providers";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteHeader } from "@/components/layout/site-header";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import "./globals.css";
 

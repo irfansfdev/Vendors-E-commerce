@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Star } from "lucide-react";
-import { ReviewForm } from "@/components/review-form";
-import { ProductDetail } from "@/components/product-detail";
-import { ProductGrid } from "@/components/storefront-sections";
+import { ReviewForm } from "@/components/catalog/review-form";
+import { ProductDetail } from "@/components/catalog/product-detail";
+import { ProductGrid } from "@/components/shared/storefront-sections";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { getProductBySlug, getStorefrontData } from "@/lib/storefront";
 

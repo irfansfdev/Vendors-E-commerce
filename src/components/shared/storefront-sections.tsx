@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, BadgeCheck, Clock3, RotateCcw, ShieldCheck, Star, Truck } from "lucide-react";
-import { ProductCard } from "@/components/product-card";
+import { ProductCard } from "@/components/catalog/product-card";
 import type { Category, Product, Shop } from "@/lib/types";
 import { initials } from "@/lib/utils";
 
