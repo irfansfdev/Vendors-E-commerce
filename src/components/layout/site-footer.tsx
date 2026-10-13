@@ -1,29 +1,65 @@
 import Link from "next/link";
-import { Camera, MessagesSquare, Send, ShieldCheck, UsersRound } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 
 const groups = [
-  { title: "Shop", links: ["New arrivals", "Best sellers", "Deals", "Gift cards"] },
-  { title: "Sell", links: ["Open a shop", "Seller handbook", "Payouts", "Seller protection"] },
-  { title: "Support", links: ["Help center", "Track an order", "Returns", "Contact us"] },
-  { title: "Company", links: ["About BabulShop", "Careers", "Sustainability", "Press"] },
+  {
+    title: "Shop",
+    links: [
+      { label: "All products", href: "/search" },
+      { label: "Deals", href: "/search?deal=true" },
+      { label: "Shops", href: "/search?type=shop" },
+    ],
+  },
+  {
+    title: "Sell and deliver",
+    links: [
+      { label: "Open a shop", href: "/seller" },
+      { label: "Become a rider", href: "/rider/apply" },
+      { label: "Track orders", href: "/account/orders" },
+    ],
+  },
+  {
+    title: "Support",
+    links: [
+      { label: "My account", href: "/account" },
+      { label: "Returns", href: "/account/returns" },
+      { label: "Notifications", href: "/notifications" },
+    ],
+  },
 ];
 
 export function SiteFooter() {
   return (
-    <footer className="mt-20 border-t border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950">
-      <div className="mx-auto grid max-w-[1440px] gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.2fr_2fr] lg:px-8">
+    <footer className="mt-14 border-t border-[var(--border)] bg-[var(--surface)]">
+      <div className="mx-auto grid max-w-[1440px] gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.2fr_2fr] lg:px-10">
         <div className="max-w-xs">
           <Logo />
-          <p className="mt-5 text-sm leading-6 text-slate-500 dark:text-slate-400">A marketplace for exceptional products from independent shops around the world.</p>
-          <div className="mt-6 flex gap-2">{[Camera, UsersRound, MessagesSquare, Send].map((Icon, index) => <a key={index} href="#" className="icon-button" aria-label="Social media"><Icon className="size-4" /></a>) }</div>
+          <p className="mt-3 text-sm text-[var(--text-muted)]">
+            Thoughtful products from independent shops.
+          </p>
         </div>
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-          {groups.map((group) => <div key={group.title}><h3 className="text-sm font-bold">{group.title}</h3><ul className="mt-4 space-y-3">{group.links.map((link) => <li key={link}><Link href="#" className="text-sm text-slate-500 transition hover:text-orange-500 dark:text-slate-400">{link}</Link></li>)}</ul></div>)}
-          <div><h3 className="text-sm font-bold">Delivery</h3><ul className="mt-4 space-y-3"><li><Link href="/rider/apply" className="text-sm text-slate-500 transition hover:text-orange-500 dark:text-slate-400">Become a rider</Link></li><li><Link href="/account/orders" className="text-sm text-slate-500 transition hover:text-orange-500 dark:text-slate-400">Track deliveries</Link></li></ul></div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3">
+          {groups.map((group) => (
+            <div key={group.title}>
+              <h2 className="text-sm font-semibold text-[var(--text)]">{group.title}</h2>
+              <ul className="mt-3 space-y-2.5">
+                {group.links.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="text-sm text-[var(--text-muted)] transition hover:text-[var(--accent)]">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       </div>
-      <div className="border-t border-slate-200 dark:border-white/10"><div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-4 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:px-6 lg:px-8"><p>© 2026 BabulShop Marketplace. All rights reserved.</p><div className="flex items-center gap-5"><Link href="#">Privacy</Link><Link href="#">Terms</Link><span className="flex items-center gap-1.5"><ShieldCheck className="size-4 text-emerald-500" /> Secure checkout</span></div></div></div>
+      <div className="border-t border-[var(--border)]">
+        <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-2 px-4 py-4 text-xs text-[var(--text-muted)] sm:flex-row sm:px-6 lg:px-10">
+          <p>© 2026 BabulShop Marketplace. All rights reserved.</p>
+        </div>
+      </div>
     </footer>
   );
 }

@@ -195,7 +195,7 @@ export function SiteHeader({ user }: HeaderProps) {
   return (
     <>
       {/* Announcement */}
-      <div className="bg-[#102a2a] px-4 py-2 text-center text-xs text-white/90">
+      <div className="bg-[#102a2a] px-4 py-1.5 text-center text-[11px] text-white/90">
         {ANNOUNCEMENT.text}
         <Link
           href={ANNOUNCEMENT.href}
